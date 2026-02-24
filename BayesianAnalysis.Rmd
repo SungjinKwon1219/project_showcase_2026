@@ -1,0 +1,74 @@
+---
+title: "BayesianAnalysis"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(faraway)
+library(caret)
+```
+
+```{r BAC_calculator}
+#standard formula 
+shots <- readline(prompt = "Enter number of shots: ")
+a = 0.6 * as.numeric(shots)
+r = 0.68
+w = 120
+h = 2
+
+bac = ((a * 5.14) / (w * r)) - (0.015 * h)
+bac
+```
+
+```{r BAC_calculator2}
+#change beta and r
+#r can be modeled as a function of weight gender height age and water drank
+shots <- readline(prompt = "Enter number of shots: ")
+weight <- readline(prompt = "Enter weight: ")
+height <- readline(prompt = "Enter height (in): ")
+age <- readline(prompt = "Enter age: ")
+a = 0.6 * as.numeric(shots)
+r = 0.68
+h = 2
+beta = 0.015
+
+#formula for men
+r_update_men = (2.447 - 0.09156 * as.numeric(age) + 0.1074 * as.numeric(height) * 2.54 + 0.3362 * (as.numeric(weight) * 0.45359237)) / (as.numeric(weight) * 0.45359237)
+
+#formula for women
+r_update_women = (-2.097 + 0.1069 * as.numeric(height) * 2.54 + 0.2466 * (as.numeric(weight) * 0.45359237)) / (as.numeric(weight) * 0.45359237)
+
+bac_update = ((a * 5.14) / (as.numeric(weight) * r_update_men)) - (beta * h)
+bac_update
+```
+
+```{r CSV}
+waterInfo <- read.csv("waterdata.csv")
+waterInfo$percent <- waterInfo$watervol / waterInfo$weight
+```
+
+```{r}
+IndependenceC <- aov(percent ~ gender, data = waterInfo)
+summary.aov(IndependenceC)
+
+waterInfoM <- waterInfo[waterInfo$gender == 1,]
+
+model_M <- lm(percent ~ age + weight + height, data = waterInfoM)
+summary(model_M)
+
+waterInfoF <- waterInfo[waterInfo$gender == 2,]
+
+model_F <- lm(percent ~ age + weight + height, data = waterInfoF)
+summary(model_F)
+```
+
+```{r}
+test <- data.frame(age = c(19),
+                   weight = c(50),
+                   height = c(164)
+                   
+)
+predict(model_F, test)
+```
+
