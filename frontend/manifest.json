@@ -1,20 +1,21 @@
 {
-    "name": "Safer",
-    "short_name": "Safer",
-    "start_url": "/index.html",
-    "display": "standalone",
-    "background_color": "#060910",
-    "theme_color": "#060910",
-    "icons": [
-      {
-        "src": "icon.png",
-        "sizes": "192x192",
-        "type": "image/png"
-      },
-      {
-        "src": "icon.png",
-        "sizes": "512x512",
-        "type": "image/png"
-      }
-    ]
-  }
+  "name": "Safer",
+  "short_name": "Safer",
+  "start_url": "/project_showcase_2026/frontend/index.html",
+  "scope": "/project_showcase_2026/frontend/",
+  "display": "standalone",
+  "background_color": "#060910",
+  "theme_color": "#060910",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
