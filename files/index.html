@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Safer — Personalized BAC Estimation</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060910;
+    --surface: rgba(255,255,255,0.04);
+    --surface-hover: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.08);
+    --border-bright: rgba(255,255,255,0.15);
+    --accent: #C8F04D;
+    --accent-dim: rgba(200,240,77,0.15);
+    --accent-glow: rgba(200,240,77,0.35);
+    --red: #FF6B6B;
+    --blue: #5B8DEF;
+    --text: #F0F4FF;
+    --muted: #6B7A99;
+    --muted-mid: #8A96B0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.5;
+  }
+
+  /* ── BG BLOBS ── */
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .blob-1 { width: 600px; height: 600px; background: rgba(200,240,77,0.06); top: -200px; right: -100px; }
+  .blob-2 { width: 500px; height: 500px; background: rgba(91,141,239,0.07); bottom: -150px; left: -100px; }
+  .blob-3 { width: 300px; height: 300px; background: rgba(255,107,107,0.05); top: 40%; left: 40%; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 3rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(6,9,16,0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .nav-logo span {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.8); }
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 400;
+    transition: color 0.2s;
+    letter-spacing: 0.2px;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-cta {
+    background: var(--accent);
+    color: #0F1A00 !important;
+    padding: 0.5rem 1.2rem;
+    border-radius: 100px;
+    font-weight: 500 !important;
+    transition: box-shadow 0.2s, transform 0.2s !important;
+  }
+
+  .nav-cta:hover {
+    box-shadow: 0 0 20px var(--accent-glow);
+    transform: translateY(-1px);
+    color: #0F1A00 !important;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .page {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+    padding: 8rem 3rem 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .hero-left { animation: fadeUp 0.8s ease both; }
+  .hero-right { animation: fadeUp 0.8s 0.2s ease both; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--border-bright);
+    border-radius: 100px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.78rem;
+    color: var(--muted-mid);
+    margin-bottom: 1.8rem;
+    letter-spacing: 0.5px;
+  }
+
+  .hero-badge .dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(3rem, 5vw, 4.5rem);
+    line-height: 1.0;
+    letter-spacing: -2px;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+  }
+
+  .hero-title .accent-text {
+    color: var(--accent);
+    display: block;
+  }
+
+  .hero-desc {
+    color: var(--muted-mid);
+    font-size: 1.05rem;
+    line-height: 1.7;
+    max-width: 460px;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0F1A00;
+    padding: 0.85rem 2rem;
+    border-radius: 100px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: box-shadow 0.25s, transform 0.25s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 32px var(--accent-glow), 0 4px 20px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted-mid);
+    padding: 0.85rem 1.5rem;
+    border-radius: 100px;
+    border: 1px solid var(--border-bright);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 400;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    text-decoration: none;
+  }
+
+  .btn-ghost:hover {
+    border-color: rgba(255,255,255,0.25);
+    color: var(--text);
+    background: var(--surface);
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 2rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .stat-item {}
+
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: var(--text);
+    letter-spacing: -1px;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── LOGIN CARD ── */
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 2.5rem;
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .login-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(200,240,77,0.4), transparent);
+  }
+
+  .login-card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+
+  .login-card-sub {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+  }
+
+  .input-group {
+    margin-bottom: 1.2rem;
+  }
+
+  .input-group label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--muted-mid);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .input-group input {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    transition: border-color 0.2s, background 0.2s;
+    outline: none;
+  }
+
+  .input-group input:focus {
+    border-color: var(--accent);
+    background: rgba(200,240,77,0.04);
+  }
+
+  .input-group input::placeholder { color: var(--muted); }
+
+  .login-submit {
+    width: 100%;
+    background: var(--accent);
+    color: #0F1A00;
+    padding: 0.95rem;
+    border-radius: 12px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 1.5rem;
+    transition: box-shadow 0.25s, transform 0.25s;
+  }
+
+  .login-submit:hover {
+    box-shadow: 0 0 28px var(--accent-glow);
+    transform: translateY(-1px);
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .social-login {
+    width: 100%;
+    background: var(--surface-hover);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.85rem;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    text-decoration: none;
+  }
+
+  .social-login:hover {
+    border-color: var(--border-bright);
+    background: rgba(255,255,255,0.08);
+  }
+
+  .login-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .login-footer a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  /* ── FEATURES ── */
+  .section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 6rem 3rem;
+  }
+
+  .section-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .section-tag::before {
+    content: '';
+    width: 20px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: clamp(2rem, 3.5vw, 2.8rem);
+    letter-spacing: -1.5px;
+    margin-bottom: 1rem;
+    line-height: 1.1;
+  }
+
+  .section-desc {
+    color: var(--muted-mid);
+    font-size: 1rem;
+    max-width: 520px;
+    line-height: 1.7;
+    margin-bottom: 3.5rem;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2rem;
+    transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: linear-gradient(to top, rgba(200,240,77,0.04), transparent);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+
+  .feature-card:hover {
+    border-color: rgba(200,240,77,0.25);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+
+  .feature-card:hover::after { opacity: 1; }
+
+  .feature-icon {
+    width: 44px; height: 44px;
+    background: var(--accent-dim);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid rgba(200,240,77,0.2);
+  }
+
+  .feature-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.6rem;
+    color: var(--text);
+  }
+
+  .feature-desc {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── BAC PREVIEW ── */
+  .bac-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 3rem 6rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+    align-items: center;
+  }
+
+  .bac-graph-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 2rem;
+    position: relative;
+  }
+
+  .graph-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted-mid);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .graph-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    color: var(--accent);
+    border: 1px solid rgba(200,240,77,0.3);
+    border-radius: 100px;
+    padding: 0.2rem 0.6rem;
+  }
+
+  .graph-live .live-dot {
+    width: 5px; height: 5px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  .graph-area {
+    height: 180px;
+    position: relative;
+    margin-bottom: 1rem;
+  }
+
+  .graph-area svg { width: 100%; height: 100%; }
+
+  .graph-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .bac-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .bac-metric {}
+
+  .bac-metric-val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+
+  .bac-metric-val.warn { color: #FFB347; }
+  .bac-metric-val.safe { color: var(--accent); }
+
+  .bac-metric-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── HOW IT WORKS ── */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    position: relative;
+  }
+
+  .steps-grid::before {
+    content: '';
+    position: absolute;
+    top: 28px;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), var(--border), transparent);
+  }
+
+  .step-card {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .step-card:nth-child(2) { animation-delay: 0.1s; }
+  .step-card:nth-child(3) { animation-delay: 0.2s; }
+  .step-card:nth-child(4) { animation-delay: 0.3s; }
+
+  .step-num {
+    width: 56px; height: 56px;
+    border: 1px solid var(--border-bright);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--accent);
+    margin: 0 auto 1.2rem;
+    background: rgba(200,240,77,0.06);
+    position: relative;
+    z-index: 1;
+  }
+
+  .step-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .step-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .footer-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .footer-note {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+  }
+
+  .footer-links a {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover { color: var(--text); }
+
+  /* ── SCROLL REVEAL ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; padding: 7rem 1.5rem 4rem; gap: 3rem; }
+    .features-grid { grid-template-columns: 1fr 1fr; }
+    .bac-section { grid-template-columns: 1fr; padding: 2rem 1.5rem 4rem; gap: 3rem; }
+    .steps-grid { grid-template-columns: 1fr 1fr; }
+    .steps-grid::before { display: none; }
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { display: none; }
+    .section { padding: 4rem 1.5rem; }
+    footer { flex-direction: column; gap: 1rem; text-align: center; padding: 2rem 1.5rem; }
+  }
+
+  @media (max-width: 600px) {
+    .features-grid { grid-template-columns: 1fr; }
+    .steps-grid { grid-template-columns: 1fr; }
+    .hero-stats { flex-wrap: wrap; gap: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<nav>
+  <div class="nav-logo"><span></span> safer</div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#login" class="nav-cta">Get started</a></li>
+  </ul>
+</nav>
+
+<div class="page">
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div class="hero-left">
+      <h1 class="hero-title">
+        Know your<br>
+        <span class="accent-text">limits.</span>
+      </h1>
+      <p class="hero-desc">
+        Safer uses personalized BAC modeling — powered by the Widmark formula and Bayesian estimation — to help you understand your body's response to alcohol in real time.
+      </p>
+      <div class="hero-actions">
+        <a href="#how" class="btn-ghost">See how it works</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item">
+          <div class="stat-num">950+</div>
+          <div class="stat-label">IV violations / year</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">81%</div>
+          <div class="stat-label">Deltopia EMS alcohol-related</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">1,519</div>
+          <div class="stat-label">College deaths annually</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-right" id="login">
+      <div class="login-card">
+        <div class="login-card-title">Welcome back</div>
+        <div class="login-card-sub">Sign in to your Safer account</div>
+        <div class="input-group">
+          <label>Email address</label>
+          <input type="email" placeholder="you@ucsb.edu">
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input type="password" placeholder="••••••••">
+        </div>
+        <button class="login-submit">Sign In →</button>
+        <div class="divider">or</div>
+        <a href="#" class="social-login">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" fill="#8A96B0"/></svg>
+          Continue with GitHub
+        </a>
+        <div class="login-footer">
+          No account? <a href="#">Create one free</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FEATURES ── -->
+  <section class="section" id="features">
+    <div class="reveal">
+      <div class="section-tag">Features</div>
+      <h2 class="section-title">Built for real people,<br>not textbooks</h2>
+      <p class="section-desc">Every body is different. Safer adapts its model to you over time using Bayesian shrinkage estimation, getting smarter with every session you log.</p>
+    </div>
+    <div class="features-grid reveal">
+      <div class="feature-card">
+        <div class="feature-icon">🧬</div>
+        <div class="feature-title">Personalized r Estimation</div>
+        <div class="feature-desc">We replace the Widmark formula's fixed body water constant with a regression model trained on NHANES data. Your r adapts as you log sessions.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Real-Time BAC Curve</div>
+        <div class="feature-desc">Visualize your BAC trajectory over time — before, during, and after drinking — with live-updating estimates as conditions change.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌙</div>
+        <div class="feature-title">Context-Aware Modifiers</div>
+        <div class="feature-desc">Slept 4 hours? Skipped dinner? Dehydrated? Safer adjusts your elimination rate β using pre-session inputs that actually matter.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔮</div>
+        <div class="feature-title">Bayesian Profile Update</div>
+        <div class="feature-desc">As sessions accumulate, population priors fade. Your personal history carries more weight. The model becomes uniquely yours.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📝</div>
+        <div class="feature-title">Session History</div>
+        <div class="feature-desc">Log every drink, every feeling, every context. Your history feeds the model and lets you track patterns across time.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <div class="feature-title">Safer, Not Preachy</div>
+        <div class="feature-desc">This isn't a sobriety app. It's a harm reduction tool. We give you honest information so you can make smart, informed choices.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── BAC PREVIEW ── -->
+  <section class="bac-section" id="about">
+    <div class="reveal">
+      <div class="section-tag">Live Preview</div>
+      <h2 class="section-title">See your BAC<br>before you feel it</h2>
+      <p class="section-desc">
+        The peak BAC you feel now isn't your peak BAC. Most alcohol-related injuries happen because people underestimate where they're heading. Safer shows you the full curve.
+      </p>
+      <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
+        <li style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; color: var(--muted-mid);">
+          <span style="width: 20px; height: 20px; background: var(--accent-dim); border: 1px solid rgba(200,240,77,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--accent); flex-shrink: 0;">✓</span>
+          Peak BAC prediction with 30-min lag accounted for
+        </li>
+        <li style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; color: var(--muted-mid);">
+          <span style="width: 20px; height: 20px; background: var(--accent-dim); border: 1px solid rgba(200,240,77,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--accent); flex-shrink: 0;">✓</span>
+          Safe drinking range suggestion per session
+        </li>
+        <li style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; color: var(--muted-mid);">
+          <span style="width: 20px; height: 20px; background: var(--accent-dim); border: 1px solid rgba(200,240,77,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--accent); flex-shrink: 0;">✓</span>
+          Legal limit (0.08%) clearly marked
+        </li>
+      </ul>
+    </div>
+
+    <div class="bac-graph-card reveal">
+      <div class="graph-title">
+        BAC Curve — Current Session
+        <span class="graph-live"><span class="live-dot"></span> Live</span>
+      </div>
+      <div class="graph-area">
+        <svg viewBox="0 0 380 180" preserveAspectRatio="none">
+          <!-- Grid lines -->
+          <line x1="0" y1="36" x2="380" y2="36" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+          <line x1="0" y1="72" x2="380" y2="72" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+          <line x1="0" y1="108" x2="380" y2="108" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+          <line x1="0" y1="144" x2="380" y2="144" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+          <!-- 0.08 limit line -->
+          <line x1="0" y1="72" x2="380" y2="72" stroke="rgba(255,107,107,0.4)" stroke-width="1" stroke-dasharray="6,4"/>
+          <text x="8" y="68" font-size="9" fill="rgba(255,107,107,0.7)" font-family="DM Sans">0.08%</text>
+          <!-- BAC curve fill -->
+          <defs>
+            <linearGradient id="bacGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#C8F04D" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="#C8F04D" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0 170 C30 165 60 100 90 60 C120 25 140 20 160 24 C190 30 220 55 250 85 C280 115 310 145 340 158 L380 165 L380 180 L0 180 Z" fill="url(#bacGrad)"/>
+          <!-- BAC curve line -->
+          <path d="M0 170 C30 165 60 100 90 60 C120 25 140 20 160 24 C190 30 220 55 250 85 C280 115 310 145 340 158 L380 165" fill="none" stroke="#C8F04D" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- Current position dot -->
+          <circle cx="160" cy="24" r="5" fill="#C8F04D" filter="drop-shadow(0 0 6px #C8F04D)"/>
+          <circle cx="160" cy="24" r="10" fill="rgba(200,240,77,0.2)"/>
+          <!-- Future dashed -->
+          <path d="M160 24 C190 30 220 55 250 85 C280 115 310 145 340 158 L380 165" fill="none" stroke="#C8F04D" stroke-width="2" stroke-dasharray="5,4" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="graph-labels">
+        <span>12:00 AM</span><span>1:00</span><span>2:00</span><span>3:00</span><span>4:00</span>
+      </div>
+      <div class="bac-metrics">
+        <div class="bac-metric">
+          <div class="bac-metric-val warn">0.071</div>
+          <div class="bac-metric-label">Current BAC</div>
+        </div>
+        <div class="bac-metric">
+          <div class="bac-metric-val" style="color: var(--red);">0.094</div>
+          <div class="bac-metric-label">Predicted Peak</div>
+        </div>
+        <div class="bac-metric">
+          <div class="bac-metric-val safe">+1 drink</div>
+          <div class="bac-metric-label">Safe to have</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS ── -->
+  <section class="section" id="how" style="padding-top: 2rem;">
+    <div class="reveal" style="text-align: center; max-width: 500px; margin: 0 auto 3.5rem;">
+      <div class="section-tag" style="justify-content: center;">How It Works</div>
+      <h2 class="section-title">Four steps to safer nights</h2>
+    </div>
+    <div class="steps-grid reveal">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-title">Build your profile</div>
+        <div class="step-desc">Enter your biological data — sex, weight, age — to initialize your personal r estimate from our NHANES-trained model.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-title">Set the context</div>
+        <div class="step-desc">Tell Safer about today: how much you slept, when you ate, how hydrated you are. These adjust your β elimination rate.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <div class="step-title">Log your drinks</div>
+        <div class="step-desc">Track drinks in real-time as the night goes on. Your BAC curve updates live with each entry.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <div class="step-title">Model learns you</div>
+        <div class="step-desc">Post-session feedback refines your personal estimates. The more you log, the more accurate Safer becomes for you.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer>
+    <div class="footer-logo">
+      <span style="width:7px;height:7px;background:var(--accent);border-radius:50%;box-shadow:0 0 10px var(--accent);"></span>
+      safer
+    </div>
+    <div class="footer-note">Irayna Lin · Kyle Costabile · Sungjin Kwon</div>
+    <ul class="footer-links">
+      <li><a href="#">Privacy</a></li>
+      <li><a href="#">About</a></li>
+      <li><a href="#">GitHub</a></li>
+    </ul>
+  </footer>
+
+</div>
+
+<script>
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        // stagger children
+        const cards = e.target.querySelectorAll('.feature-card, .step-card');
+        cards.forEach((card, i) => {
+          card.style.transitionDelay = `${i * 0.08}s`;
+        });
+      }
+    });
+  }, { threshold: 0.1 });
+
+  reveals.forEach(el => observer.observe(el));
+
+  // Smooth login button
+  document.querySelector('.login-submit').addEventListener('click', function() {
+    this.textContent = 'Signing in...';
+    this.style.opacity = '0.8';
+    setTimeout(() => {
+      this.textContent = 'Welcome back ✓';
+      this.style.background = '#5B8DEF';
+      this.style.color = 'white';
+    }, 1200);
+  });
+</script>
+</body>
+</html>

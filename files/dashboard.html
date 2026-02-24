@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Safer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060910;
+    --sidebar: #080C14;
+    --surface: rgba(255,255,255,0.04);
+    --surface-hover: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.08);
+    --border-bright: rgba(255,255,255,0.15);
+    --accent: #C8F04D;
+    --accent-dim: rgba(200,240,77,0.12);
+    --accent-glow: rgba(200,240,77,0.3);
+    --red: #FF6B6B;
+    --orange: #FFB347;
+    --blue: #5B8DEF;
+    --text: #F0F4FF;
+    --muted: #6B7A99;
+    --muted-mid: #8A96B0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 240px;
+    min-height: 100vh;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem 1.25rem;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 50;
+  }
+
+  .sidebar-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 2.5rem;
+    padding: 0 0.5rem;
+  }
+
+  .sidebar-logo .dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: 0.5; }
+  }
+
+  .sidebar-section {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 0 0.5rem;
+    margin-bottom: 0.6rem;
+    margin-top: 1.5rem;
+  }
+
+  .sidebar-section:first-of-type { margin-top: 0; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.88rem;
+    color: var(--muted-mid);
+    transition: background 0.15s, color 0.15s;
+    margin-bottom: 0.2rem;
+  }
+
+  .nav-item:hover { background: var(--surface-hover); color: var(--text); }
+
+  .nav-item.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid rgba(200,240,77,0.2);
+  }
+
+  .nav-icon { font-size: 1rem; flex-shrink: 0; }
+
+  .sidebar-bottom {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+  }
+
+  .user-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .user-pill:hover { background: var(--surface-hover); }
+
+  .user-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #C8F04D 0%, #5B8DEF 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #0F1A00;
+    flex-shrink: 0;
+  }
+
+  .user-info {}
+  .user-name { font-size: 0.83rem; font-weight: 500; color: var(--text); }
+  .user-email { font-size: 0.72rem; color: var(--muted); }
+
+  /* ── MAIN ── */
+  .main {
+    margin-left: 240px;
+    flex: 1;
+    padding: 2rem 2.5rem;
+    max-width: calc(100vw - 240px);
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+  }
+
+  .page-heading {}
+  .page-heading h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: -0.5px;
+  }
+
+  .page-heading p {
+    font-size: 0.83rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+  }
+
+  .topbar-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .btn-sm {
+    padding: 0.55rem 1.1rem;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.83rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-sm-ghost {
+    background: var(--surface);
+    color: var(--muted-mid);
+    border: 1px solid var(--border);
+  }
+
+  .btn-sm-ghost:hover { border-color: var(--border-bright); color: var(--text); }
+
+  .btn-sm-accent {
+    background: var(--accent);
+    color: #0F1A00;
+    border: none;
+    font-weight: 500;
+  }
+
+  .btn-sm-accent:hover { box-shadow: 0 0 18px var(--accent-glow); }
+
+  /* ── METRIC ROW ── */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.4rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .metric-card:nth-child(2) { animation-delay: 0.05s; }
+  .metric-card:nth-child(3) { animation-delay: 0.1s; }
+  .metric-card:nth-child(4) { animation-delay: 0.15s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .metric-card:hover { border-color: var(--border-bright); transform: translateY(-2px); }
+
+  .metric-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 500;
+    margin-bottom: 0.6rem;
+  }
+
+  .metric-val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.8rem;
+    letter-spacing: -1px;
+    color: var(--text);
+  }
+
+  .metric-val.safe { color: var(--accent); }
+  .metric-val.warn { color: var(--orange); }
+  .metric-val.danger { color: var(--red); }
+
+  .metric-change {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .metric-change .up { color: var(--accent); }
+  .metric-change .down { color: var(--red); }
+
+  .metric-glow {
+    position: absolute;
+    bottom: -20px; right: -20px;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    filter: blur(30px);
+    opacity: 0.3;
+  }
+
+  /* ── CONTENT GRID ── */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.75rem;
+    animation: fadeUp 0.5s 0.2s ease both;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .card-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 100px;
+    padding: 0.25rem 0.7rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+  }
+
+  .pill-green { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(200,240,77,0.2); }
+  .pill-orange { background: rgba(255,179,71,0.12); color: var(--orange); border: 1px solid rgba(255,179,71,0.2); }
+  .pill-blue { background: rgba(91,141,239,0.12); color: var(--blue); border: 1px solid rgba(91,141,239,0.2); }
+  .pill-red { background: rgba(255,107,107,0.12); color: var(--red); border: 1px solid rgba(255,107,107,0.2); }
+
+  /* ── BAC GRAPH ── */
+  .graph-wrap {
+    height: 200px;
+    position: relative;
+  }
+
+  .graph-wrap svg { width: 100%; height: 100%; }
+
+  .graph-x-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.6rem;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  /* ── SESSION LIST ── */
+  .session-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: padding-left 0.2s;
+  }
+
+  .session-item:last-child { border-bottom: none; }
+  .session-item:hover { padding-left: 4px; }
+
+  .session-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .session-meta { flex: 1; }
+  .session-name { font-size: 0.85rem; font-weight: 500; color: var(--text); }
+  .session-date { font-size: 0.73rem; color: var(--muted); margin-top: 0.1rem; }
+  .session-bac {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.5px;
+  }
+
+  /* ── BOTTOM GRID ── */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  /* ── RADIAL PROGRESS ── */
+  .radial-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem 0;
+    position: relative;
+  }
+
+  .radial-wrap svg { transform: rotate(-90deg); }
+
+  .radial-center {
+    position: absolute;
+    text-align: center;
+  }
+
+  .radial-val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -1px;
+    color: var(--text);
+  }
+
+  .radial-label {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 0.1rem;
+  }
+
+  /* ── HYDRATION / CONTEXT ── */
+  .context-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .context-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .context-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+  .context-meta { flex: 1; }
+  .context-name { font-size: 0.82rem; font-weight: 500; }
+  .context-val { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-top: 0.4rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 1s ease;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 1100px) {
+    .metrics-row { grid-template-columns: repeat(2, 1fr); }
+    .content-grid { grid-template-columns: 1fr; }
+    .bottom-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 800px) {
+    .sidebar { width: 64px; padding: 1rem 0.75rem; }
+    .sidebar-logo span:last-child,
+    .sidebar-section, .user-info,
+    .nav-item span:last-child { display: none; }
+    .nav-item { justify-content: center; padding: 0.65rem; }
+    .user-pill { justify-content: center; }
+    .main { margin-left: 64px; padding: 1.5rem; max-width: calc(100vw - 64px); }
+    .bottom-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <span class="dot"></span>
+    <span>safer</span>
+  </div>
+
+  <div class="sidebar-section">Main</div>
+  <a href="dashboard.html" class="nav-item active">
+    <span class="nav-icon">▦</span>
+    <span>Dashboard</span>
+  </a>
+  <a href="bac-calculator.html" class="nav-item">
+    <span class="nav-icon">⬡</span>
+    <span>BAC Calculator</span>
+  </a>
+  <a href="history.html" class="nav-item">
+    <span class="nav-icon">◷</span>
+    <span>History</span>
+  </a>
+
+  <div class="sidebar-section">Account</div>
+  <a href="#" class="nav-item">
+    <span class="nav-icon">◉</span>
+    <span>My Profile</span>
+  </a>
+  <a href="#" class="nav-item">
+    <span class="nav-icon">⚙</span>
+    <span>Settings</span>
+  </a>
+
+  <div class="sidebar-bottom">
+    <div class="user-pill">
+      <div class="user-avatar">IL</div>
+      <div class="user-info">
+        <div class="user-name">Irayna L.</div>
+        <div class="user-email">irayna@ucsb.edu</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-heading">
+      <h1>Welcome back, Irayna 👋</h1>
+      <p>Monday, February 23, 2026 · Your model has 5 sessions of personal data</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-sm btn-sm-ghost">Export CSV</button>
+      <a href="bac-calculator.html"><button class="btn-sm btn-sm-accent">+ New Session</button></a>
+    </div>
+  </div>
+
+  <!-- METRICS -->
+  <div class="metrics-row">
+    <div class="metric-card">
+      <div class="metric-glow" style="background: var(--accent);"></div>
+      <div class="metric-label">Last Peak BAC</div>
+      <div class="metric-val warn">0.094</div>
+      <div class="metric-change"><span class="down">↑ +0.012</span> from prev. session</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-glow" style="background: var(--blue);"></div>
+      <div class="metric-label">Sessions Logged</div>
+      <div class="metric-val">5</div>
+      <div class="metric-change"><span class="up">+2</span> this month</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-glow" style="background: #C8F04D;"></div>
+      <div class="metric-label">Personal r̂ Estimate</div>
+      <div class="metric-val safe">0.61</div>
+      <div class="metric-change">↓ 0.04 from NHANES prior (0.65)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-glow" style="background: var(--orange);"></div>
+      <div class="metric-label">Avg β̂ Rate</div>
+      <div class="metric-val">0.0153</div>
+      <div class="metric-change"><span class="up">+0.0003</span> vs population avg</div>
+    </div>
+  </div>
+
+  <!-- CONTENT GRID -->
+  <div class="content-grid">
+    <!-- BAC Over Time -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">BAC History — All Sessions</div>
+          <div class="card-sub">Peak BAC recorded per session over time</div>
+        </div>
+        <span class="pill pill-green">↑ Model updating</span>
+      </div>
+      <div class="graph-wrap">
+        <svg viewBox="0 0 560 200" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#C8F04D" stop-opacity="0.2"/>
+              <stop offset="100%" stop-color="#C8F04D" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#5B8DEF" stop-opacity="0.15"/>
+              <stop offset="100%" stop-color="#5B8DEF" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <!-- Grid -->
+          <line x1="0" y1="40" x2="560" y2="40" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="0" y1="80" x2="560" y2="80" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="0" y1="120" x2="560" y2="120" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <line x1="0" y1="160" x2="560" y2="160" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+          <!-- 0.08 limit -->
+          <line x1="0" y1="96" x2="560" y2="96" stroke="rgba(255,107,107,0.3)" stroke-width="1" stroke-dasharray="6,4"/>
+          <text x="8" y="91" font-size="9" fill="rgba(255,107,107,0.6)" font-family="DM Sans">0.08</text>
+          <!-- Area -->
+          <path d="M 40 160 L 140 140 L 240 110 L 340 125 L 440 100 L 520 112 L 520 190 L 40 190 Z" fill="url(#histGrad)"/>
+          <!-- Line -->
+          <path d="M 40 160 L 140 140 L 240 110 L 340 125 L 440 100 L 520 112" fill="none" stroke="#C8F04D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Dots -->
+          <circle cx="40" cy="160" r="4" fill="#C8F04D" opacity="0.7"/>
+          <circle cx="140" cy="140" r="4" fill="#C8F04D" opacity="0.7"/>
+          <circle cx="240" cy="110" r="4" fill="#C8F04D" opacity="0.7"/>
+          <circle cx="340" cy="125" r="4" fill="#C8F04D" opacity="0.7"/>
+          <circle cx="440" cy="100" r="4" fill="#C8F04D"/>
+          <circle cx="440" cy="100" r="8" fill="rgba(200,240,77,0.2)"/>
+          <circle cx="520" cy="112" r="5" fill="#C8F04D" filter="drop-shadow(0 0 6px #C8F04D)"/>
+        </svg>
+      </div>
+      <div class="graph-x-labels">
+        <span>Jan 4</span><span>Jan 11</span><span>Jan 18</span><span>Jan 25</span><span>Feb 2</span><span>Feb 23</span>
+      </div>
+    </div>
+
+    <!-- Recent Sessions -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Recent Sessions</div>
+          <div class="card-sub">Last 5 recorded</div>
+        </div>
+        <a href="history.html" style="font-size: 0.78rem; color: var(--accent); text-decoration: none;">View all →</a>
+      </div>
+      <div class="session-item">
+        <div class="session-icon" style="background: rgba(255,107,107,0.12);">🥃</div>
+        <div class="session-meta">
+          <div class="session-name">Deltopia Pre-game</div>
+          <div class="session-date">Feb 22, 2026</div>
+        </div>
+        <span class="session-bac" style="color: var(--red);">0.094</span>
+      </div>
+      <div class="session-item">
+        <div class="session-icon" style="background: rgba(255,179,71,0.1);">🍺</div>
+        <div class="session-meta">
+          <div class="session-name">House Party</div>
+          <div class="session-date">Feb 14, 2026</div>
+        </div>
+        <span class="session-bac" style="color: var(--orange);">0.082</span>
+      </div>
+      <div class="session-item">
+        <div class="session-icon" style="background: var(--accent-dim);">🍷</div>
+        <div class="session-meta">
+          <div class="session-name">Valentine's Dinner</div>
+          <div class="session-date">Feb 7, 2026</div>
+        </div>
+        <span class="session-bac" style="color: var(--accent);">0.041</span>
+      </div>
+      <div class="session-item">
+        <div class="session-icon" style="background: rgba(91,141,239,0.1);">🎉</div>
+        <div class="session-meta">
+          <div class="session-name">Birthday Party</div>
+          <div class="session-date">Jan 29, 2026</div>
+        </div>
+        <span class="session-bac" style="color: var(--orange);">0.071</span>
+      </div>
+      <div class="session-item">
+        <div class="session-icon" style="background: rgba(255,255,255,0.05);">🍻</div>
+        <div class="session-meta">
+          <div class="session-name">Friday Kick-back</div>
+          <div class="session-date">Jan 25, 2026</div>
+        </div>
+        <span class="session-bac" style="color: var(--accent);">0.053</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM ROW -->
+  <div class="bottom-grid">
+
+    <!-- Model confidence -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Personal r̂ Convergence</div>
+          <div class="card-sub">How close your estimate is to optimal</div>
+        </div>
+      </div>
+      <div class="radial-wrap">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <circle cx="70" cy="70" r="56" fill="none" stroke="var(--border)" stroke-width="10"/>
+          <circle cx="70" cy="70" r="56" fill="none" stroke="#C8F04D" stroke-width="10"
+            stroke-dasharray="351.86" stroke-dashoffset="105" stroke-linecap="round"
+            style="filter: drop-shadow(0 0 8px rgba(200,240,77,0.5))"/>
+        </svg>
+        <div class="radial-center">
+          <div class="radial-val">70%</div>
+          <div class="radial-label">confidence</div>
+        </div>
+      </div>
+      <p style="font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 0.5rem;">
+        Log <strong style="color: var(--accent);">3 more sessions</strong> to reach high confidence
+      </p>
+    </div>
+
+    <!-- Pre-session context -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Last Session Context</div>
+          <div class="card-sub">Factors applied to β modifier</div>
+        </div>
+        <span class="pill pill-orange">Suboptimal</span>
+      </div>
+      <div class="context-row">
+        <div class="context-item">
+          <span class="context-icon">🌙</span>
+          <div class="context-meta">
+            <div class="context-name">Sleep</div>
+            <div class="context-val">5.5 hrs (below avg) · δ₁ = −0.002</div>
+            <div class="progress-bar" style="margin-top: 0.4rem;"><div class="progress-fill" style="width: 46%; background: var(--orange);"></div></div>
+          </div>
+        </div>
+        <div class="context-item">
+          <span class="context-icon">💧</span>
+          <div class="context-meta">
+            <div class="context-name">Hydration</div>
+            <div class="context-val">Moderate · δ₂ = +0.001</div>
+            <div class="progress-bar"><div class="progress-fill" style="width: 60%; background: var(--blue);"></div></div>
+          </div>
+        </div>
+        <div class="context-item">
+          <span class="context-icon">🍔</span>
+          <div class="context-meta">
+            <div class="context-name">Food consumed</div>
+            <div class="context-val">Ate ~4hrs prior · δ₃ = −0.001</div>
+            <div class="progress-bar"><div class="progress-fill" style="width: 35%; background: var(--red);"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drink suggestion -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Tonight's Suggestion</div>
+          <div class="card-sub">Based on your current profile</div>
+        </div>
+        <span class="pill pill-green">Safe</span>
+      </div>
+      <div style="text-align: center; padding: 1.5rem 0 1rem;">
+        <div style="font-family: 'Syne', sans-serif; font-weight: 800; font-size: 3.5rem; color: var(--accent); letter-spacing: -3px; line-height: 1;">3–4</div>
+        <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem;">standard drinks to stay under 0.08%</div>
+        <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.75rem; padding: 0.6rem; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid var(--border);">
+          Based on: r̂=0.61, β̂=0.0153, <br>tonight's body weight + session context
+        </div>
+      </div>
+      <a href="bac-calculator.html"><button class="btn-sm btn-sm-accent" style="width: 100%; border-radius: 12px; padding: 0.75rem; font-size: 0.9rem;">Start Logging →</button></a>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  // Animate progress bars on load
+  window.addEventListener('load', () => {
+    const fills = document.querySelectorAll('.progress-fill');
+    fills.forEach(f => {
+      const w = f.style.width;
+      f.style.width = '0';
+      setTimeout(() => { f.style.width = w; }, 400);
+    });
+  });
+</script>
+</body>
+</html>

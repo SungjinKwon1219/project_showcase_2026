@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>History — Safer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060910;
+    --sidebar: #080C14;
+    --surface: rgba(255,255,255,0.04);
+    --surface-hover: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.08);
+    --border-bright: rgba(255,255,255,0.15);
+    --accent: #C8F04D;
+    --accent-dim: rgba(200,240,77,0.12);
+    --accent-glow: rgba(200,240,77,0.3);
+    --red: #FF6B6B;
+    --orange: #FFB347;
+    --blue: #5B8DEF;
+    --text: #F0F4FF;
+    --muted: #6B7A99;
+    --muted-mid: #8A96B0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; min-height: 100vh; display: flex; }
+
+  /* SIDEBAR */
+  .sidebar { width: 240px; min-height: 100vh; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.75rem 1.25rem; position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; }
+  .sidebar-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2.5rem; padding: 0 0.5rem; }
+  .sidebar-logo .dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+  .sidebar-section { font-size: 0.65rem; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 500; padding: 0 0.5rem; margin-bottom: 0.6rem; margin-top: 1.5rem; }
+  .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 10px; cursor: pointer; text-decoration: none; font-size: 0.88rem; color: var(--muted-mid); transition: background 0.15s, color 0.15s; margin-bottom: 0.2rem; }
+  .nav-item:hover { background: var(--surface-hover); color: var(--text); }
+  .nav-item.active { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(200,240,77,0.2); }
+  .nav-icon { font-size: 1rem; }
+  .sidebar-bottom { margin-top: auto; border-top: 1px solid var(--border); padding-top: 1.25rem; }
+  .user-pill { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 10px; cursor: pointer; transition: background 0.15s; }
+  .user-pill:hover { background: var(--surface-hover); }
+  .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #C8F04D 0%, #5B8DEF 100%); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: #0F1A00; flex-shrink: 0; }
+  .user-name { font-size: 0.83rem; font-weight: 500; color: var(--text); }
+  .user-email { font-size: 0.72rem; color: var(--muted); }
+
+  /* MAIN */
+  .main { margin-left: 240px; flex: 1; padding: 2rem 2.5rem; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5rem; }
+  .page-heading h1 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: -0.5px; }
+  .page-heading p { font-size: 0.83rem; color: var(--muted); margin-top: 0.2rem; }
+
+  .btn-sm { padding: 0.55rem 1.1rem; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.83rem; cursor: pointer; transition: all 0.2s; }
+  .btn-sm-ghost { background: var(--surface); color: var(--muted-mid); border: 1px solid var(--border); }
+  .btn-sm-ghost:hover { border-color: var(--border-bright); color: var(--text); }
+  .btn-sm-accent { background: var(--accent); color: #0F1A00; border: none; font-weight: 500; }
+  .btn-sm-accent:hover { box-shadow: 0 0 18px var(--accent-glow); }
+
+  /* SUMMARY ROW */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .summary-card:nth-child(2) { animation-delay: 0.05s; }
+  .summary-card:nth-child(3) { animation-delay: 0.1s; }
+  .summary-card:nth-child(4) { animation-delay: 0.15s; }
+
+  @keyframes fadeUp { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform: translateY(0); } }
+
+  .sum-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.5rem; font-weight: 500; }
+  .sum-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.6rem; letter-spacing: -1px; }
+  .sum-val.safe { color: var(--accent); }
+  .sum-val.warn { color: var(--orange); }
+
+  /* MAIN CONTENT */
+  .hist-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  /* TABLE */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    animation: fadeUp 0.5s 0.2s ease both;
+  }
+
+  .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 1.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .table-title { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.95rem; }
+  .table-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.1rem; }
+
+  .search-input {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.5rem 0.9rem;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.83rem;
+    outline: none;
+    width: 200px;
+    transition: border-color 0.2s;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead th {
+    text-align: left;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 500;
+    padding: 0.75rem 1.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr {
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-hover); }
+  tbody tr.selected { background: var(--accent-dim); }
+
+  tbody td {
+    padding: 1rem 1.75rem;
+    font-size: 0.85rem;
+  }
+
+  .td-session { display: flex; align-items: center; gap: 0.75rem; }
+  .td-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+  .td-name { font-weight: 500; color: var(--text); }
+  .td-date { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
+
+  .bac-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 100px;
+    padding: 0.2rem 0.65rem;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .badge-safe { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(200,240,77,0.2); }
+  .badge-warn { background: rgba(255,179,71,0.12); color: var(--orange); border: 1px solid rgba(255,179,71,0.2); }
+  .badge-danger { background: rgba(255,107,107,0.12); color: var(--red); border: 1px solid rgba(255,107,107,0.2); }
+
+  .context-chips { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .chip { font-size: 0.7rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 100px; padding: 0.2rem 0.5rem; color: var(--muted-mid); }
+
+  /* SIDEBAR DETAIL */
+  .detail-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    animation: fadeUp 0.5s 0.25s ease both;
+    position: sticky;
+    top: 2rem;
+  }
+
+  .detail-top {
+    padding: 1.75rem;
+    background: linear-gradient(135deg, rgba(200,240,77,0.06), transparent);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; }
+  .detail-date { font-size: 0.78rem; color: var(--muted); margin-top: 0.25rem; }
+
+  .detail-bac {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 3rem;
+    letter-spacing: -2px;
+    color: var(--orange);
+    margin-top: 1rem;
+    line-height: 1;
+  }
+
+  .detail-body { padding: 1.5rem 1.75rem; display: flex; flex-direction: column; gap: 1rem; }
+
+  .detail-row { display: flex; align-items: center; justify-content: space-between; }
+  .detail-key { font-size: 0.78rem; color: var(--muted); }
+  .detail-value { font-size: 0.82rem; font-weight: 500; color: var(--text); }
+
+  .detail-graph { height: 100px; margin: 0.5rem 0; }
+  .detail-graph svg { width: 100%; height: 100%; }
+
+  .model-update {
+    background: var(--accent-dim);
+    border: 1px solid rgba(200,240,77,0.2);
+    border-radius: 12px;
+    padding: 1rem;
+    font-size: 0.78rem;
+    color: var(--muted-mid);
+    line-height: 1.5;
+  }
+
+  .model-update strong { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo"><span class="dot"></span><span>safer</span></div>
+  <div class="sidebar-section">Main</div>
+  <a href="dashboard.html" class="nav-item"><span class="nav-icon">▦</span><span>Dashboard</span></a>
+  <a href="bac-calculator.html" class="nav-item"><span class="nav-icon">⬡</span><span>BAC Calculator</span></a>
+  <a href="history.html" class="nav-item active"><span class="nav-icon">◷</span><span>History</span></a>
+  <div class="sidebar-section">Account</div>
+  <a href="#" class="nav-item"><span class="nav-icon">◉</span><span>My Profile</span></a>
+  <a href="#" class="nav-item"><span class="nav-icon">⚙</span><span>Settings</span></a>
+  <div class="sidebar-bottom">
+    <div class="user-pill">
+      <div class="user-avatar">IL</div>
+      <div class="user-info"><div class="user-name">Irayna L.</div><div class="user-email">irayna@ucsb.edu</div></div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-heading">
+      <h1>Session History</h1>
+      <p>All logged sessions · Model updates with each entry</p>
+    </div>
+    <div style="display:flex; gap: 0.75rem;">
+      <button class="btn-sm btn-sm-ghost">Export CSV</button>
+      <a href="bac-calculator.html"><button class="btn-sm btn-sm-accent">+ Log Session</button></a>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="sum-label">Total Sessions</div>
+      <div class="sum-val">5</div>
+    </div>
+    <div class="summary-card">
+      <div class="sum-label">Avg Peak BAC</div>
+      <div class="sum-val warn">0.068</div>
+    </div>
+    <div class="summary-card">
+      <div class="sum-label">Times Over 0.08</div>
+      <div class="sum-val" style="color: var(--red);">1</div>
+    </div>
+    <div class="summary-card">
+      <div class="sum-label">Model Accuracy ↑</div>
+      <div class="sum-val safe">70%</div>
+    </div>
+  </div>
+
+  <div class="hist-grid">
+    <!-- TABLE -->
+    <div class="table-card">
+      <div class="table-header">
+        <div>
+          <div class="table-title">All Sessions</div>
+          <div class="table-sub">Click any row to see full breakdown</div>
+        </div>
+        <input class="search-input" type="text" placeholder="🔍 Search sessions...">
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Session</th>
+            <th>Drinks</th>
+            <th>Duration</th>
+            <th>Peak BAC</th>
+            <th>Context</th>
+          </tr>
+        </thead>
+        <tbody id="sessionsTable">
+          <tr onclick="selectSession(0)" class="selected">
+            <td>
+              <div class="td-session">
+                <div class="td-icon" style="background: rgba(255,107,107,0.12);">🥃</div>
+                <div><div class="td-name">Deltopia Pre-game</div><div class="td-date">Feb 22, 2026</div></div>
+              </div>
+            </td>
+            <td>6 drinks</td>
+            <td>3 hrs</td>
+            <td><span class="bac-badge badge-danger">0.094</span></td>
+            <td>
+              <div class="context-chips">
+                <span class="chip">5.5h sleep</span>
+                <span class="chip">💧 normal</span>
+                <span class="chip">🥗 light meal</span>
+              </div>
+            </td>
+          </tr>
+          <tr onclick="selectSession(1)">
+            <td>
+              <div class="td-session">
+                <div class="td-icon" style="background: rgba(255,179,71,0.1);">🍺</div>
+                <div><div class="td-name">House Party</div><div class="td-date">Feb 14, 2026</div></div>
+              </div>
+            </td>
+            <td>5 drinks</td>
+            <td>2.5 hrs</td>
+            <td><span class="bac-badge badge-warn">0.082</span></td>
+            <td>
+              <div class="context-chips">
+                <span class="chip">7h sleep</span>
+                <span class="chip">💧 normal</span>
+                <span class="chip">🍔 full meal</span>
+              </div>
+            </td>
+          </tr>
+          <tr onclick="selectSession(2)">
+            <td>
+              <div class="td-session">
+                <div class="td-icon" style="background: var(--accent-dim);">🍷</div>
+                <div><div class="td-name">Valentine's Dinner</div><div class="td-date">Feb 7, 2026</div></div>
+              </div>
+            </td>
+            <td>2 drinks</td>
+            <td>2 hrs</td>
+            <td><span class="bac-badge badge-safe">0.041</span></td>
+            <td>
+              <div class="context-chips">
+                <span class="chip">8h sleep</span>
+                <span class="chip">🌊 well hydrated</span>
+                <span class="chip">🍔 full meal</span>
+              </div>
+            </td>
+          </tr>
+          <tr onclick="selectSession(3)">
+            <td>
+              <div class="td-session">
+                <div class="td-icon" style="background: rgba(91,141,239,0.1);">🎉</div>
+                <div><div class="td-name">Birthday Party</div><div class="td-date">Jan 29, 2026</div></div>
+              </div>
+            </td>
+            <td>4 drinks</td>
+            <td>3 hrs</td>
+            <td><span class="bac-badge badge-warn">0.071</span></td>
+            <td>
+              <div class="context-chips">
+                <span class="chip">6h sleep</span>
+                <span class="chip">💧 normal</span>
+                <span class="chip">🥗 light meal</span>
+              </div>
+            </td>
+          </tr>
+          <tr onclick="selectSession(4)">
+            <td>
+              <div class="td-session">
+                <div class="td-icon" style="background: rgba(255,255,255,0.05);">🍻</div>
+                <div><div class="td-name">Friday Kick-back</div><div class="td-date">Jan 25, 2026</div></div>
+              </div>
+            </td>
+            <td>3 drinks</td>
+            <td>2 hrs</td>
+            <td><span class="bac-badge badge-safe">0.053</span></td>
+            <td>
+              <div class="context-chips">
+                <span class="chip">7.5h sleep</span>
+                <span class="chip">🌊 well hydrated</span>
+                <span class="chip">🍔 full meal</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- DETAIL PANEL -->
+    <div class="detail-card">
+      <div class="detail-top">
+        <div class="detail-title">Deltopia Pre-game</div>
+        <div class="detail-date">February 22, 2026 · 10:00 PM – 1:00 AM</div>
+        <div class="detail-bac">0.094<span style="font-size:1rem; color: var(--muted); font-weight: 400;">%</span></div>
+      </div>
+      <div class="detail-body">
+        <div class="detail-graph">
+          <svg viewBox="0 0 320 100" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="dg1" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#FF6B6B" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#FF6B6B" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="47" x2="320" y2="47" stroke="rgba(255,107,107,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
+            <path d="M0 90 C40 85 80 50 120 22 C150 5 170 8 200 20 C240 38 280 65 320 78 L320 100 L0 100 Z" fill="url(#dg1)"/>
+            <path d="M0 90 C40 85 80 50 120 22 C150 5 170 8 200 20 C240 38 280 65 320 78" fill="none" stroke="#FF6B6B" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="170" cy="8" r="4" fill="#FF6B6B" filter="drop-shadow(0 0 4px #FF6B6B)"/>
+          </svg>
+        </div>
+        <div class="detail-row"><span class="detail-key">Standard drinks</span><span class="detail-value">6</span></div>
+        <div class="detail-row"><span class="detail-key">Duration</span><span class="detail-value">3 hours</span></div>
+        <div class="detail-row"><span class="detail-key">Session r̂ implied</span><span class="detail-value">0.59</span></div>
+        <div class="detail-row"><span class="detail-key">Session β̂ implied</span><span class="detail-value">0.0148</span></div>
+        <div class="detail-row"><span class="detail-key">Sleep pre-session</span><span class="detail-value" style="color: var(--orange);">5.5 hrs (below avg)</span></div>
+        <div class="detail-row"><span class="detail-key">Hydration</span><span class="detail-value">Normal</span></div>
+        <div class="detail-row"><span class="detail-key">Last meal</span><span class="detail-value">Light (4hrs prior)</span></div>
+        <div class="detail-row"><span class="detail-key">Post-session feeling</span><span class="detail-value" style="color: var(--red);">Very intoxicated</span></div>
+        <div class="model-update">
+          <strong>Model update applied:</strong> This session's implied r̂ (0.59) pulled your personal estimate from 0.62 → 0.61. Weight: session 5 of ∞.
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const sessions = [
+    { title: 'Deltopia Pre-game', date: 'February 22, 2026 · 10:00 PM – 1:00 AM', bac: '0.094', bacColor: '#FF6B6B', drinks: 6, duration: '3 hours', r: '0.59', beta: '0.0148', sleep: '5.5 hrs (below avg)', sleepColor: 'var(--orange)', hyd: 'Normal', food: 'Light (4hrs prior)', feeling: 'Very intoxicated', feelingColor: 'var(--red)', modelNote: 'This session's implied r̂ (0.59) pulled your personal estimate from 0.62 → 0.61.' },
+    { title: 'House Party', date: 'February 14, 2026 · 9:00 PM – 11:30 PM', bac: '0.082', bacColor: '#FFB347', drinks: 5, duration: '2.5 hours', r: '0.60', beta: '0.0151', sleep: '7 hrs', sleepColor: 'var(--text)', hyd: 'Normal', food: 'Full meal', feeling: 'Moderately intoxicated', feelingColor: 'var(--orange)', modelNote: 'Session r̂ (0.60) close to current estimate — minimal model shift.' },
+    { title: 'Valentine\'s Dinner', date: 'February 7, 2026 · 7:00 PM – 9:00 PM', bac: '0.041', bacColor: '#C8F04D', drinks: 2, duration: '2 hours', r: '0.63', beta: '0.0157', sleep: '8 hrs', sleepColor: 'var(--accent)', hyd: 'Well hydrated', food: 'Full meal', feeling: 'Mildly tipsy', feelingColor: 'var(--accent)', modelNote: 'High-quality session data. Strong prior reinforcement.' },
+    { title: 'Birthday Party', date: 'January 29, 2026 · 8:00 PM – 11:00 PM', bac: '0.071', bacColor: '#FFB347', drinks: 4, duration: '3 hours', r: '0.61', beta: '0.0153', sleep: '6 hrs', sleepColor: 'var(--muted-mid)', hyd: 'Normal', food: 'Light meal', feeling: 'Moderately intoxicated', feelingColor: 'var(--orange)', modelNote: 'Session aligned with current estimate. No significant shift.' },
+    { title: 'Friday Kick-back', date: 'January 25, 2026 · 9:00 PM – 11:00 PM', bac: '0.053', bacColor: '#C8F04D', drinks: 3, duration: '2 hours', r: '0.62', beta: '0.0155', sleep: '7.5 hrs', sleepColor: 'var(--accent)', hyd: 'Well hydrated', food: 'Full meal', feeling: 'Slightly tipsy', feelingColor: 'var(--accent)', modelNote: 'First session logged. Initialized model from NHANES prior.' },
+  ];
+
+  function selectSession(idx) {
+    const s = sessions[idx];
+    document.querySelectorAll('tbody tr').forEach((r, i) => {
+      r.classList.toggle('selected', i === idx);
+    });
+
+    const detail = document.querySelector('.detail-card');
+    detail.querySelector('.detail-title').textContent = s.title;
+    detail.querySelector('.detail-date').textContent = s.date;
+    detail.querySelector('.detail-bac').innerHTML = `${s.bac}<span style="font-size:1rem; color: var(--muted); font-weight: 400;">%</span>`;
+    detail.querySelector('.detail-bac').style.color = s.bacColor;
+
+    const rows = detail.querySelectorAll('.detail-row .detail-value');
+    rows[0].textContent = s.drinks;
+    rows[1].textContent = s.duration;
+    rows[2].textContent = s.r;
+    rows[3].textContent = s.beta;
+    rows[4].textContent = s.sleep;
+    rows[4].style.color = s.sleepColor;
+    rows[5].textContent = s.hyd;
+    rows[6].textContent = s.food;
+    rows[7].textContent = s.feeling;
+    rows[7].style.color = s.feelingColor;
+    detail.querySelector('.model-update').innerHTML = `<strong>Model update applied:</strong> ${s.modelNote}`;
+  }
+</script>
+</body>
+</html>
