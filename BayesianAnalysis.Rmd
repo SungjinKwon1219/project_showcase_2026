@@ -46,6 +46,7 @@ bac_update
 ```{r CSV}
 waterInfo <- read.csv("waterdata.csv")
 waterInfo$percent <- waterInfo$watervol / waterInfo$weight
+waterInfo
 ```
 
 ```{r}
@@ -53,22 +54,109 @@ IndependenceC <- aov(percent ~ gender, data = waterInfo)
 summary.aov(IndependenceC)
 
 waterInfoM <- waterInfo[waterInfo$gender == 1,]
+quantile(waterInfoM$bodyfat_percent)[[2]]
+
+for (i in 1:length(waterInfoM$bodyfat_percent)){
+  if(waterInfoM$bodyfat_percent[i] <= quantile(waterInfoM$bodyfat_percent)[[2]]){
+    waterInfoM$fat[i] <- "low"
+  } else if(waterInfoM$bodyfat_percent[i] <= quantile(waterInfoM$bodyfat_percent)[[4]]){
+    waterInfoM$fat[i] <- "mid"
+  } else {
+    waterInfoM$fat[i] <- "high"
+  }
+}
+waterInfoM[,c(8, 10)]
 
 model_M <- lm(percent ~ age + weight + height, data = waterInfoM)
 summary(model_M)
 
 waterInfoF <- waterInfo[waterInfo$gender == 2,]
+quantile(waterInfoF$bodyfat_percent)
 
 model_F <- lm(percent ~ age + weight + height, data = waterInfoF)
 summary(model_F)
 ```
 
 ```{r}
+
 test <- data.frame(age = c(19),
                    weight = c(50),
                    height = c(164)
                    
 )
-predict(model_F, test)
+r_update_men <- predict(model_M, test)
+print (paste("Updated R:", r_update_men))
+
+shots <- readline(prompt = "Enter number of shots: ")
+weight <- readline(prompt = "Enter weight: ")
+height <- readline(prompt = "Enter height (in): ")
+age <- readline(prompt = "Enter age: ")
+a = 0.6 * as.numeric(shots)
+beta = 0.015
+
+bac_update = ((a * 5.14) / (as.numeric(weight) * r_update_men)) - (beta * h)
+bac_update
+```
+
+```{r}
+
+plot(waterInfo$percent ~ waterInfo$weight)
+plot(waterInfo[waterInfo$gender == 2,]$percent ~ waterInfo[waterInfo$gender == 2,]$weight)
+plot(waterInfo[waterInfo$gender == 1,]$percent ~ waterInfo[waterInfo$gender == 1,]$weight)
+
+plot(waterInfo$percent ~ waterInfo$height)
+plot(waterInfo[waterInfo$gender == 2,]$percent ~ waterInfo[waterInfo$gender == 2,]$height)
+plot(waterInfo[waterInfo$gender == 1,]$percent ~ waterInfo[waterInfo$gender == 1,]$height)
+```
+
+```{r}
+IndependenceC <- aov(percent ~ gender, data = waterInfo)
+summary.aov(IndependenceC)
+
+
+model_M1 <- lm(percent ~ age + weight + height, data = waterInfoM)
+summary(model_M1)
+
+
+model_M2 <- lm(percent ~ age + weight + height + fat, data = waterInfoM)
+summary(model_M2)
+plot(model_M2$residuals ~ model_M1$fitted.values)
+qqnorm(model_M2$residuals)
+```
+```{r}
+test <- data.frame(age = c(19, 19, 20),
+                   weight = c(54.5, 54.5, 70),
+                   height = c(165, 165, 175.26),
+                   fat = c("low", "mid", "low")
+                   
+)
+r_update_men <- predict(model_M2, test)
+print (paste("Updated R:", r_update_men))
+```
+
+```{r}
+testnormal <- data.frame(sample = rnorm(10, mean = 0.02, sd = 0.0025)
+)
+
+library(tidyverse)
+library(brms)
+library(rstan)
+install.packages("rstanarm")
+library(rstanarm)
+library(tidybayes)
+library(ggdist)
+library(posterior)
+```
+
+```{r}
+testnormal <- data.frame(sample = rnorm(2, mean = 0.025, sd = 0.025)
+)
+testnormal
+fit <- stan_glm(sample ~ 1, data = testnormal, family = gaussian(),
+                prior = normal(0.015, 0.0025), cores = 4, seed = 1)
+```
+```{r}
+posterior_interval(fit, prob = 0.95)
+coef(fit)
 ```
 
