@@ -237,6 +237,26 @@
   }
 
   .model-update strong { color: var(--accent); }
+
+  .empty-state {
+    padding: 2.5rem 1.75rem;
+    text-align: center;
+    color: var(--muted-mid);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .empty-state a { color: var(--accent); font-weight: 500; }
+  .badge-draft { background: rgba(91,141,239,0.12); color: var(--blue); border: 1px solid rgba(91,141,239,0.25); }
+  .detail-status-big {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    letter-spacing: -1px;
+    margin-top: 1rem;
+    line-height: 1;
+    text-transform: capitalize;
+  }
+  .mono { font-family: ui-monospace, Menlo, monospace; font-size: 0.65rem; color: var(--muted); word-break: break-all; }
 </style>
 </head>
 <body>
@@ -249,7 +269,7 @@
   <a href="bac-calculator.html" class="nav-item"><span class="nav-icon">⬡</span><span>BAC Calculator</span></a>
   <a href="history.html" class="nav-item active"><span class="nav-icon">◷</span><span>History</span></a>
   <div class="sidebar-section">Account</div>
-  <a href="#" class="nav-item"><span class="nav-icon">◉</span><span>My Profile</span></a>
+  <a href="input.html" class="nav-item"><span class="nav-icon">◉</span><span>My Profile</span></a>
   <a href="#" class="nav-item"><span class="nav-icon">⚙</span><span>Settings</span></a>
   <div class="sidebar-bottom">
     <div class="user-pill">
@@ -264,7 +284,7 @@
   <div class="topbar">
     <div class="page-heading">
       <h1>Session History</h1>
-      <p>All logged sessions · Model updates with each entry</p>
+      <p>Sessions saved on this device · BAC estimates will layer on later</p>
     </div>
     <div style="display:flex; gap: 0.75rem;">
       <button class="btn-sm btn-sm-ghost">Export CSV</button>
@@ -276,19 +296,19 @@
   <div class="summary-row">
     <div class="summary-card">
       <div class="sum-label">Total Sessions</div>
-      <div class="sum-val">5</div>
+      <div class="sum-val" id="sumTotal">0</div>
     </div>
     <div class="summary-card">
-      <div class="sum-label">Avg Peak BAC</div>
-      <div class="sum-val warn">0.068</div>
+      <div class="sum-label">Completed</div>
+      <div class="sum-val safe" id="sumCompleted">0</div>
     </div>
     <div class="summary-card">
-      <div class="sum-label">Times Over 0.08</div>
-      <div class="sum-val" style="color: var(--red);">1</div>
+      <div class="sum-label">Drafts</div>
+      <div class="sum-val" id="sumDrafts" style="color: var(--blue);">0</div>
     </div>
     <div class="summary-card">
-      <div class="sum-label">Model Accuracy ↑</div>
-      <div class="sum-val safe">70%</div>
+      <div class="sum-label">BAC analytics</div>
+      <div class="sum-val" style="font-size: 1rem; color: var(--muted); font-weight: 500;">Soon</div>
     </div>
   </div>
 
@@ -298,187 +318,198 @@
       <div class="table-header">
         <div>
           <div class="table-title">All Sessions</div>
-          <div class="table-sub">Click any row to see full breakdown</div>
+          <div class="table-sub">Local data only · click a row for details</div>
         </div>
-        <input class="search-input" type="text" placeholder="🔍 Search sessions...">
+        <input class="search-input" type="text" id="sessionSearch" placeholder="🔍 Filter by id or status…" autocomplete="off">
       </div>
       <table>
         <thead>
           <tr>
             <th>Session</th>
+            <th>Started</th>
+            <th>Status</th>
             <th>Drinks</th>
-            <th>Duration</th>
-            <th>Peak BAC</th>
-            <th>Context</th>
+            <th>Hours</th>
           </tr>
         </thead>
-        <tbody id="sessionsTable">
-          <tr onclick="selectSession(0)" class="selected">
-            <td>
-              <div class="td-session">
-                <div class="td-icon" style="background: rgba(255,107,107,0.12);">🥃</div>
-                <div><div class="td-name">Deltopia Pre-game</div><div class="td-date">Feb 22, 2026</div></div>
-              </div>
-            </td>
-            <td>6 drinks</td>
-            <td>3 hrs</td>
-            <td><span class="bac-badge badge-danger">0.094</span></td>
-            <td>
-              <div class="context-chips">
-                <span class="chip">5.5h sleep</span>
-                <span class="chip">💧 normal</span>
-                <span class="chip">🥗 light meal</span>
-              </div>
-            </td>
-          </tr>
-          <tr onclick="selectSession(1)">
-            <td>
-              <div class="td-session">
-                <div class="td-icon" style="background: rgba(255,179,71,0.1);">🍺</div>
-                <div><div class="td-name">House Party</div><div class="td-date">Feb 14, 2026</div></div>
-              </div>
-            </td>
-            <td>5 drinks</td>
-            <td>2.5 hrs</td>
-            <td><span class="bac-badge badge-warn">0.082</span></td>
-            <td>
-              <div class="context-chips">
-                <span class="chip">7h sleep</span>
-                <span class="chip">💧 normal</span>
-                <span class="chip">🍔 full meal</span>
-              </div>
-            </td>
-          </tr>
-          <tr onclick="selectSession(2)">
-            <td>
-              <div class="td-session">
-                <div class="td-icon" style="background: var(--accent-dim);">🍷</div>
-                <div><div class="td-name">Valentine's Dinner</div><div class="td-date">Feb 7, 2026</div></div>
-              </div>
-            </td>
-            <td>2 drinks</td>
-            <td>2 hrs</td>
-            <td><span class="bac-badge badge-safe">0.041</span></td>
-            <td>
-              <div class="context-chips">
-                <span class="chip">8h sleep</span>
-                <span class="chip">🌊 well hydrated</span>
-                <span class="chip">🍔 full meal</span>
-              </div>
-            </td>
-          </tr>
-          <tr onclick="selectSession(3)">
-            <td>
-              <div class="td-session">
-                <div class="td-icon" style="background: rgba(91,141,239,0.1);">🎉</div>
-                <div><div class="td-name">Birthday Party</div><div class="td-date">Jan 29, 2026</div></div>
-              </div>
-            </td>
-            <td>4 drinks</td>
-            <td>3 hrs</td>
-            <td><span class="bac-badge badge-warn">0.071</span></td>
-            <td>
-              <div class="context-chips">
-                <span class="chip">6h sleep</span>
-                <span class="chip">💧 normal</span>
-                <span class="chip">🥗 light meal</span>
-              </div>
-            </td>
-          </tr>
-          <tr onclick="selectSession(4)">
-            <td>
-              <div class="td-session">
-                <div class="td-icon" style="background: rgba(255,255,255,0.05);">🍻</div>
-                <div><div class="td-name">Friday Kick-back</div><div class="td-date">Jan 25, 2026</div></div>
-              </div>
-            </td>
-            <td>3 drinks</td>
-            <td>2 hrs</td>
-            <td><span class="bac-badge badge-safe">0.053</span></td>
-            <td>
-              <div class="context-chips">
-                <span class="chip">7.5h sleep</span>
-                <span class="chip">🌊 well hydrated</span>
-                <span class="chip">🍔 full meal</span>
-              </div>
-            </td>
-          </tr>
-        </tbody>
+        <tbody id="sessionsTable"></tbody>
       </table>
     </div>
 
     <!-- DETAIL PANEL -->
-    <div class="detail-card">
+    <div class="detail-card" id="detailCard">
       <div class="detail-top">
-        <div class="detail-title">Deltopia Pre-game</div>
-        <div class="detail-date">February 22, 2026 · 10:00 PM – 1:00 AM</div>
-        <div class="detail-bac">0.094<span style="font-size:1rem; color: var(--muted); font-weight: 400;">%</span></div>
+        <div class="detail-title" id="detailTitle">—</div>
+        <div class="detail-date" id="detailDate">Select a session</div>
+        <div class="detail-status-big" id="detailStatus"> </div>
       </div>
-      <div class="detail-body">
-        <div class="detail-graph">
-          <svg viewBox="0 0 320 100" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="dg1" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#FF6B6B" stop-opacity="0.25"/>
-                <stop offset="100%" stop-color="#FF6B6B" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <line x1="0" y1="47" x2="320" y2="47" stroke="rgba(255,107,107,0.3)" stroke-width="1" stroke-dasharray="4,3"/>
-            <path d="M0 90 C40 85 80 50 120 22 C150 5 170 8 200 20 C240 38 280 65 320 78 L320 100 L0 100 Z" fill="url(#dg1)"/>
-            <path d="M0 90 C40 85 80 50 120 22 C150 5 170 8 200 20 C240 38 280 65 320 78" fill="none" stroke="#FF6B6B" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="170" cy="8" r="4" fill="#FF6B6B" filter="drop-shadow(0 0 4px #FF6B6B)"/>
-          </svg>
-        </div>
-        <div class="detail-row"><span class="detail-key">Standard drinks</span><span class="detail-value">6</span></div>
-        <div class="detail-row"><span class="detail-key">Duration</span><span class="detail-value">3 hours</span></div>
-        <div class="detail-row"><span class="detail-key">Session r̂ implied</span><span class="detail-value">0.59</span></div>
-        <div class="detail-row"><span class="detail-key">Session β̂ implied</span><span class="detail-value">0.0148</span></div>
-        <div class="detail-row"><span class="detail-key">Sleep pre-session</span><span class="detail-value" style="color: var(--orange);">5.5 hrs (below avg)</span></div>
-        <div class="detail-row"><span class="detail-key">Hydration</span><span class="detail-value">Normal</span></div>
-        <div class="detail-row"><span class="detail-key">Last meal</span><span class="detail-value">Light (4hrs prior)</span></div>
-        <div class="detail-row"><span class="detail-key">Post-session feeling</span><span class="detail-value" style="color: var(--red);">Very intoxicated</span></div>
-        <div class="model-update">
-          <strong>Model update applied:</strong> This session's implied r̂ (0.59) pulled your personal estimate from 0.62 → 0.61. Weight: session 5 of ∞.
-        </div>
+      <div class="detail-body" id="detailBody">
+        <p class="detail-key" style="text-align:center;">Choose a row to inspect stored inputs.</p>
       </div>
     </div>
   </div>
 </main>
 
+<script src="session-storage.js"></script>
 <script>
-  const sessions = [
-    { title: 'Deltopia Pre-game', date: 'February 22, 2026 · 10:00 PM – 1:00 AM', bac: '0.094', bacColor: '#FF6B6B', drinks: 6, duration: '3 hours', r: '0.59', beta: '0.0148', sleep: '5.5 hrs (below avg)', sleepColor: 'var(--orange)', hyd: 'Normal', food: 'Light (4hrs prior)', feeling: 'Very intoxicated', feelingColor: 'var(--red)', modelNote: 'This session's implied r̂ (0.59) pulled your personal estimate from 0.62 → 0.61.' },
-    { title: 'House Party', date: 'February 14, 2026 · 9:00 PM – 11:30 PM', bac: '0.082', bacColor: '#FFB347', drinks: 5, duration: '2.5 hours', r: '0.60', beta: '0.0151', sleep: '7 hrs', sleepColor: 'var(--text)', hyd: 'Normal', food: 'Full meal', feeling: 'Moderately intoxicated', feelingColor: 'var(--orange)', modelNote: 'Session r̂ (0.60) close to current estimate — minimal model shift.' },
-    { title: 'Valentine\'s Dinner', date: 'February 7, 2026 · 7:00 PM – 9:00 PM', bac: '0.041', bacColor: '#C8F04D', drinks: 2, duration: '2 hours', r: '0.63', beta: '0.0157', sleep: '8 hrs', sleepColor: 'var(--accent)', hyd: 'Well hydrated', food: 'Full meal', feeling: 'Mildly tipsy', feelingColor: 'var(--accent)', modelNote: 'High-quality session data. Strong prior reinforcement.' },
-    { title: 'Birthday Party', date: 'January 29, 2026 · 8:00 PM – 11:00 PM', bac: '0.071', bacColor: '#FFB347', drinks: 4, duration: '3 hours', r: '0.61', beta: '0.0153', sleep: '6 hrs', sleepColor: 'var(--muted-mid)', hyd: 'Normal', food: 'Light meal', feeling: 'Moderately intoxicated', feelingColor: 'var(--orange)', modelNote: 'Session aligned with current estimate. No significant shift.' },
-    { title: 'Friday Kick-back', date: 'January 25, 2026 · 9:00 PM – 11:00 PM', bac: '0.053', bacColor: '#C8F04D', drinks: 3, duration: '2 hours', r: '0.62', beta: '0.0155', sleep: '7.5 hrs', sleepColor: 'var(--accent)', hyd: 'Well hydrated', food: 'Full meal', feeling: 'Slightly tipsy', feelingColor: 'var(--accent)', modelNote: 'First session logged. Initialized model from NHANES prior.' },
-  ];
+(function () {
+  var S = window.SaferSessionStorage;
+  var sortedSessions = [];
+  var filterText = '';
 
-  function selectSession(idx) {
-    const s = sessions[idx];
-    document.querySelectorAll('tbody tr').forEach((r, i) => {
-      r.classList.toggle('selected', i === idx);
+  function shortId(id) {
+    if (!id) return '—';
+    return id.length > 14 ? id.slice(0, 10) + '…' : id;
+  }
+
+  function formatWhen(iso) {
+    if (!iso) return '—';
+    try {
+      var d = new Date(iso);
+      return isNaN(d.getTime()) ? iso : d.toLocaleString();
+    } catch (e) {
+      return iso;
+    }
+  }
+
+  function statusBadgeClass(st) {
+    if (st === 'completed') return 'bac-badge badge-safe';
+    if (st === 'draft') return 'bac-badge badge-draft';
+    return 'bac-badge';
+  }
+
+  function loadSorted() {
+    var all = S.getSessions();
+    sortedSessions = all.slice().sort(function (a, b) {
+      var ta = new Date(a.started_at || 0).getTime();
+      var tb = new Date(b.started_at || 0).getTime();
+      return tb - ta;
+    });
+  }
+
+  function matchesFilter(s) {
+    if (!filterText) return true;
+    var q = filterText.toLowerCase();
+    return (
+      (s.session_id && s.session_id.toLowerCase().indexOf(q) !== -1) ||
+      (s.status && s.status.toLowerCase().indexOf(q) !== -1)
+    );
+  }
+
+  function renderTable() {
+    var tbody = document.getElementById('sessionsTable');
+    tbody.innerHTML = '';
+    var list = sortedSessions.filter(matchesFilter);
+
+    if (list.length === 0) {
+      var tr = document.createElement('tr');
+      var td = document.createElement('td');
+      td.colSpan = 5;
+      td.className = 'empty-state';
+      if (sortedSessions.length === 0) {
+        td.innerHTML = 'No sessions saved yet. <a href="bac-calculator.html">Start a session</a> on the BAC Calculator page.';
+      } else {
+        td.textContent = 'No sessions match your filter.';
+      }
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      document.getElementById('detailTitle').textContent = '—';
+      document.getElementById('detailDate').textContent = sortedSessions.length === 0
+        ? 'Nothing in local storage yet'
+        : 'Adjust filter or pick a session from the table';
+      document.getElementById('detailStatus').textContent = '';
+      document.getElementById('detailBody').innerHTML =
+        '<p class="detail-key" style="text-align:center;">Details appear when you select a row.</p>';
+      return;
+    }
+
+    list.forEach(function (s, idx) {
+      var globalIdx = sortedSessions.indexOf(s);
+      var tr = document.createElement('tr');
+      tr.dataset.index = String(globalIdx);
+      if (idx === 0) tr.className = 'selected';
+
+      var inp = s.inputs || {};
+      tr.innerHTML =
+        '<td><div class="td-session">' +
+          '<div class="td-icon" style="background: rgba(200,240,77,0.1);">🍺</div>' +
+          '<div><div class="td-name">' + escapeHtml(shortId(s.session_id)) + '</div>' +
+          '<div class="td-date mono">' + escapeHtml(s.session_id || '') + '</div></div></div></td>' +
+        '<td>' + escapeHtml(formatWhen(s.started_at)) + '</td>' +
+        '<td><span class="' + statusBadgeClass(s.status) + '">' + escapeHtml(s.status || '—') + '</span></td>' +
+        '<td>' + escapeHtml(String(inp.drinks != null ? inp.drinks : '—')) + '</td>' +
+        '<td>' + escapeHtml(String(inp.hours_elapsed != null ? inp.hours_elapsed : '—')) + '</td>';
+
+      tr.addEventListener('click', function () {
+        document.querySelectorAll('#sessionsTable tr').forEach(function (r) { r.classList.remove('selected'); });
+        tr.classList.add('selected');
+        showDetail(s);
+      });
+      tbody.appendChild(tr);
     });
 
-    const detail = document.querySelector('.detail-card');
-    detail.querySelector('.detail-title').textContent = s.title;
-    detail.querySelector('.detail-date').textContent = s.date;
-    detail.querySelector('.detail-bac').innerHTML = `${s.bac}<span style="font-size:1rem; color: var(--muted); font-weight: 400;">%</span>`;
-    detail.querySelector('.detail-bac').style.color = s.bacColor;
-
-    const rows = detail.querySelectorAll('.detail-row .detail-value');
-    rows[0].textContent = s.drinks;
-    rows[1].textContent = s.duration;
-    rows[2].textContent = s.r;
-    rows[3].textContent = s.beta;
-    rows[4].textContent = s.sleep;
-    rows[4].style.color = s.sleepColor;
-    rows[5].textContent = s.hyd;
-    rows[6].textContent = s.food;
-    rows[7].textContent = s.feeling;
-    rows[7].style.color = s.feelingColor;
-    detail.querySelector('.model-update').innerHTML = `<strong>Model update applied:</strong> ${s.modelNote}`;
+    if (list.length > 0) showDetail(list[0]);
   }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function showDetail(s) {
+    var inp = s.inputs || {};
+    var fb = s.feedback || {};
+    document.getElementById('detailTitle').textContent = shortId(s.session_id);
+    document.getElementById('detailDate').textContent = 'Started ' + formatWhen(s.started_at) +
+      (s.ended_at ? ' · Ended ' + formatWhen(s.ended_at) : '');
+    var stEl = document.getElementById('detailStatus');
+    stEl.textContent = s.status || '—';
+    stEl.style.color = s.status === 'completed' ? 'var(--accent)' : 'var(--blue)';
+
+    var body = document.getElementById('detailBody');
+    var rows = [
+      ['Full session ID', s.session_id || '—'],
+      ['Schema version', String(s.schema_version != null ? s.schema_version : '—')],
+      ['Drinks', String(inp.drinks != null ? inp.drinks : '—')],
+      ['Drink type', inp.drink_type || '—'],
+      ['Hours elapsed', String(inp.hours_elapsed != null ? inp.hours_elapsed : '—')],
+      ['Food intake', inp.food_intake || '—'],
+      ['Hydration', inp.hydration || '—'],
+      ['Sleep', inp.sleep || '—'],
+      ['Fasting', inp.fasting || '—'],
+      ['Perceived intoxication', fb.perceived_intoxication != null ? String(fb.perceived_intoxication) : '—'],
+      ['Hangover severity', fb.hangover_severity != null ? String(fb.hangover_severity) : '—'],
+      ['Blackout', fb.blackout != null ? String(fb.blackout) : '—'],
+      ['Vomiting', fb.vomiting != null ? String(fb.vomiting) : '—']
+    ];
+    body.innerHTML = rows.map(function (pair) {
+      return '<div class="detail-row"><span class="detail-key">' + escapeHtml(pair[0]) + '</span>' +
+        '<span class="detail-value">' + escapeHtml(pair[1]) + '</span></div>';
+    }).join('') +
+      '<div class="model-update"><strong>Note:</strong> Feedback fields are reserved for post-session capture; estimator not wired yet.</div>';
+  }
+
+  function updateSummary() {
+    var all = S.getSessions();
+    var completed = all.filter(function (x) { return x.status === 'completed'; }).length;
+    var drafts = all.filter(function (x) { return x.status === 'draft'; }).length;
+    document.getElementById('sumTotal').textContent = String(all.length);
+    document.getElementById('sumCompleted').textContent = String(completed);
+    document.getElementById('sumDrafts').textContent = String(drafts);
+  }
+
+  document.getElementById('sessionSearch').addEventListener('input', function () {
+    filterText = this.value.trim();
+    renderTable();
+  });
+
+  loadSorted();
+  updateSummary();
+  renderTable();
+})();
 </script>
 </body>
 </html>

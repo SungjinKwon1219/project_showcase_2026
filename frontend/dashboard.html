@@ -455,6 +455,56 @@
     transition: width 1s ease;
   }
 
+  /* ── PROFILE CALLOUT (non-blocking) ── */
+  .profile-callout {
+    display: none;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 14px;
+    border: 1px solid rgba(91,141,239,0.35);
+    background: rgba(91,141,239,0.08);
+    font-size: 0.84rem;
+    color: var(--muted-mid);
+    line-height: 1.5;
+  }
+
+  .profile-callout.visible { display: flex; }
+
+  .profile-callout a {
+    color: var(--accent);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .profile-callout a:hover { text-decoration: underline; }
+
+  /* ── DATA PERSIST SUMMARY (profile + sessions) ── */
+  .persist-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.84rem;
+    color: var(--muted-mid);
+    line-height: 1.5;
+  }
+  .persist-summary strong { color: var(--text); font-weight: 500; }
+  .persist-summary a {
+    color: var(--accent);
+    font-weight: 500;
+    text-decoration: none;
+    margin-left: 0.25rem;
+  }
+  .persist-summary a:hover { text-decoration: underline; }
+
   /* ── RESPONSIVE ── */
   @media (max-width: 1100px) {
     .metrics-row { grid-template-columns: repeat(2, 1fr); }
@@ -498,7 +548,7 @@
   </a>
 
   <div class="sidebar-section">Account</div>
-  <a href="#" class="nav-item">
+  <a href="input.html" class="nav-item">
     <span class="nav-icon">◉</span>
     <span>My Profile</span>
   </a>
@@ -520,6 +570,14 @@
 
 <!-- ── MAIN ── -->
 <main class="main">
+  <div class="profile-callout" id="profileCallout" role="status">
+    <span style="flex-shrink: 0; margin-top: 0.1rem;">ℹ️</span>
+    <span>You have not created a personalized profile on this device yet.
+      <a href="input.html">Create your profile</a> to help future estimates fit you better.</span>
+  </div>
+
+  <div class="persist-summary" id="persistSummary" role="status"></div>
+
   <div class="topbar">
     <div class="page-heading">
       <h1>Welcome back, Irayna 👋</h1>
@@ -748,7 +806,38 @@
   </div>
 </main>
 
+<script src="session-storage.js"></script>
 <script>
+  (function persistSummaryInit() {
+    var el = document.getElementById('persistSummary');
+    if (!el) return;
+    var hasProfile = false;
+    try {
+      hasProfile = !!localStorage.getItem('safer_user_profile');
+    } catch (e1) { /* ignore */ }
+    var nSessions = 0;
+    try {
+      nSessions = typeof SaferSessionStorage !== 'undefined' ? SaferSessionStorage.getSessions().length : 0;
+    } catch (e2) { /* ignore */ }
+    var parts = [
+      '<strong>Profile:</strong> ' + (hasProfile ? 'saved on this device' : 'not set') +
+        (hasProfile ? '' : ' · <a href="input.html">Add profile</a>'),
+      '<strong>Sessions saved:</strong> ' + nSessions
+    ];
+    if (nSessions === 0) {
+      parts.push('<span style="flex-basis:100%; margin-top:0.25rem;">No drinking sessions yet — <a href="bac-calculator.html">start one on the BAC Calculator</a>.</span>');
+    }
+    el.innerHTML = parts.join(' <span style="color:var(--border-bright);">·</span> ');
+  })();
+
+  (function profileCalloutInit() {
+    try {
+      if (!localStorage.getItem('safer_user_profile')) {
+        document.getElementById('profileCallout').classList.add('visible');
+      }
+    } catch (e) { /* ignore */ }
+  })();
+
   // Animate progress bars on load
   window.addEventListener('load', () => {
     const fills = document.querySelectorAll('.progress-fill');
