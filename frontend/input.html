@@ -272,15 +272,10 @@
         <div class="field-error" data-error-for="weight_lbs"></div>
       </div>
 
-      <div class="field" data-field="body_fat_category">
-        <label for="body_fat_category">Body fat category</label>
-        <select id="body_fat_category" name="body_fat_category" required>
-          <option value="">Select…</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-        <div class="field-error" data-error-for="body_fat_category"></div>
+      <div class="field" data-field="body_fat_percent">
+        <label for="body_fat_percent">Body fat percentage</label>
+        <input type="number" id="body_fat_percent" name="body_fat_percent" inputmode="decimal" min="0" max="60" step="0.1" placeholder="e.g. 18.5" required>
+        <div class="field-error" data-error-for="body_fat_percent"></div>
       </div>
 
       <div class="field" data-field="drinks_per_week">
@@ -341,7 +336,7 @@
     const ageBand = document.getElementById('age_band').value.trim();
     const heightIn = document.getElementById('height_in').value.trim();
     const weightLbs = document.getElementById('weight_lbs').value.trim();
-    const bodyFat = document.getElementById('body_fat_category').value.trim();
+    const bodyFatRaw = document.getElementById('body_fat_percent').value.trim();
     const drinks = document.getElementById('drinks_per_week').value.trim();
 
     if (!sex) { setFieldError('sex', 'Please select an option.'); ok = false; }
@@ -356,7 +351,19 @@
       const w = Number(weightLbs);
       if (!Number.isFinite(w) || w <= 0) { setFieldError('weight_lbs', 'Weight must be a positive number.'); ok = false; }
     }
-    if (!bodyFat) { setFieldError('body_fat_category', 'Please select a category.'); ok = false; }
+    if (!bodyFatRaw) {
+      setFieldError('body_fat_percent', 'Body fat percentage is required.');
+      ok = false;
+    } else {
+      const bf = Number(bodyFatRaw);
+      if (!Number.isFinite(bf)) {
+        setFieldError('body_fat_percent', 'Enter a valid number.');
+        ok = false;
+      } else if (bf < 0 || bf > 60) {
+        setFieldError('body_fat_percent', 'Use a value between 0 and 60.');
+        ok = false;
+      }
+    }
     if (!drinks) { setFieldError('drinks_per_week', 'This field is required.'); ok = false; }
     else {
       const d = Number(drinks);
@@ -366,13 +373,24 @@
     return ok;
   }
 
+  function bodyFatFromLegacyCategory(category) {
+    if (!category || typeof category !== 'string') return null;
+    var map = { low: 12, medium: 20, high: 30 };
+    return map[category] != null ? map[category] : null;
+  }
+
   function applyProfileToForm(profile) {
     if (!profile) return;
     if (profile.sex) document.getElementById('sex').value = profile.sex;
     if (profile.age_band) document.getElementById('age_band').value = profile.age_band;
     if (profile.height_in != null && profile.height_in !== '') document.getElementById('height_in').value = profile.height_in;
     if (profile.weight_lbs != null && profile.weight_lbs !== '') document.getElementById('weight_lbs').value = profile.weight_lbs;
-    if (profile.body_fat_category) document.getElementById('body_fat_category').value = profile.body_fat_category;
+    if (profile.body_fat_percent != null && profile.body_fat_percent !== '' && Number.isFinite(Number(profile.body_fat_percent))) {
+      document.getElementById('body_fat_percent').value = profile.body_fat_percent;
+    } else {
+      var migrated = bodyFatFromLegacyCategory(profile.body_fat_category);
+      if (migrated != null) document.getElementById('body_fat_percent').value = migrated;
+    }
     if (profile.drinks_per_week != null && profile.drinks_per_week !== '') document.getElementById('drinks_per_week').value = profile.drinks_per_week;
   }
 
@@ -384,11 +402,13 @@
     const existing = readStoredProfile();
 
     const payload = {
+      schema_version: 1,
+      profile_completed: true,
       sex: document.getElementById('sex').value,
       age_band: document.getElementById('age_band').value,
       height_in: Number(document.getElementById('height_in').value),
       weight_lbs: Number(document.getElementById('weight_lbs').value),
-      body_fat_category: document.getElementById('body_fat_category').value,
+      body_fat_percent: Number(document.getElementById('body_fat_percent').value),
       drinks_per_week: Number(document.getElementById('drinks_per_week').value),
       created_at: existing && existing.created_at ? existing.created_at : now,
       updated_at: now

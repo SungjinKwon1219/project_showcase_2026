@@ -385,6 +385,53 @@
     letter-spacing: -0.5px;
   }
 
+  .session-status-pill {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: capitalize;
+    color: var(--muted-mid);
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+  }
+
+  .recent-sessions-empty {
+    padding: 2.25rem 1.5rem 2.5rem;
+    text-align: center;
+  }
+  .recent-sessions-empty h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+  .recent-sessions-empty p {
+    font-size: 0.85rem;
+    color: var(--muted-mid);
+    line-height: 1.55;
+    margin-bottom: 1.25rem;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .recent-sessions-empty a {
+    display: inline-block;
+    background: var(--accent);
+    color: #0F1A00;
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-family: 'DM Sans', sans-serif;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .recent-sessions-empty a:hover {
+    box-shadow: 0 0 20px var(--accent-glow);
+    transform: translateY(-1px);
+  }
+
   /* ── BOTTOM GRID ── */
   .bottom-grid {
     display: grid;
@@ -667,55 +714,16 @@
       </div>
     </div>
 
-    <!-- Recent Sessions -->
-    <div class="card">
-      <div class="card-header">
+    <!-- Recent Sessions (populated from localStorage) -->
+    <div class="card" id="recentSessionsCard">
+      <div class="card-header" id="recentSessionsHeader" hidden>
         <div>
           <div class="card-title">Recent Sessions</div>
-          <div class="card-sub">Last 5 recorded</div>
+          <div class="card-sub" id="recentSessionsSub">Up to 5 most recent</div>
         </div>
-        <a href="history.html" style="font-size: 0.78rem; color: var(--accent); text-decoration: none;">View all →</a>
+        <a href="history.html" id="recentSessionsViewAll" style="font-size: 0.78rem; color: var(--accent); text-decoration: none;">View all →</a>
       </div>
-      <div class="session-item">
-        <div class="session-icon" style="background: rgba(255,107,107,0.12);">🥃</div>
-        <div class="session-meta">
-          <div class="session-name">Deltopia Pre-game</div>
-          <div class="session-date">Feb 22, 2026</div>
-        </div>
-        <span class="session-bac" style="color: var(--red);">0.094</span>
-      </div>
-      <div class="session-item">
-        <div class="session-icon" style="background: rgba(255,179,71,0.1);">🍺</div>
-        <div class="session-meta">
-          <div class="session-name">House Party</div>
-          <div class="session-date">Feb 14, 2026</div>
-        </div>
-        <span class="session-bac" style="color: var(--orange);">0.082</span>
-      </div>
-      <div class="session-item">
-        <div class="session-icon" style="background: var(--accent-dim);">🍷</div>
-        <div class="session-meta">
-          <div class="session-name">Valentine's Dinner</div>
-          <div class="session-date">Feb 7, 2026</div>
-        </div>
-        <span class="session-bac" style="color: var(--accent);">0.041</span>
-      </div>
-      <div class="session-item">
-        <div class="session-icon" style="background: rgba(91,141,239,0.1);">🎉</div>
-        <div class="session-meta">
-          <div class="session-name">Birthday Party</div>
-          <div class="session-date">Jan 29, 2026</div>
-        </div>
-        <span class="session-bac" style="color: var(--orange);">0.071</span>
-      </div>
-      <div class="session-item">
-        <div class="session-icon" style="background: rgba(255,255,255,0.05);">🍻</div>
-        <div class="session-meta">
-          <div class="session-name">Friday Kick-back</div>
-          <div class="session-date">Jan 25, 2026</div>
-        </div>
-        <span class="session-bac" style="color: var(--accent);">0.053</span>
-      </div>
+      <div id="recentSessionsBody"></div>
     </div>
   </div>
 
@@ -836,6 +844,75 @@
         document.getElementById('profileCallout').classList.add('visible');
       }
     } catch (e) { /* ignore */ }
+  })();
+
+  (function recentSessionsInit() {
+    var body = document.getElementById('recentSessionsBody');
+    var header = document.getElementById('recentSessionsHeader');
+    if (!body || !header) return;
+
+    var sessions = [];
+    try {
+      if (typeof SaferSessionStorage !== 'undefined') {
+        sessions = SaferSessionStorage.getSessions().slice();
+      } else {
+        var raw = localStorage.getItem('safer_sessions');
+        if (raw) sessions = JSON.parse(raw);
+        if (!Array.isArray(sessions)) sessions = [];
+      }
+    } catch (e) {
+      sessions = [];
+    }
+
+    sessions.sort(function (a, b) {
+      var ta = new Date((a && a.started_at) || 0).getTime();
+      var tb = new Date((b && b.started_at) || 0).getTime();
+      return tb - ta;
+    });
+
+    var top = sessions.slice(0, 5);
+
+    function formatWhen(iso) {
+      if (!iso) return '—';
+      try {
+        var d = new Date(iso);
+        return isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      } catch (e2) {
+        return '—';
+      }
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    if (top.length === 0) {
+      header.hidden = true;
+      body.innerHTML =
+        '<div class="recent-sessions-empty">' +
+          '<h3>No sessions yet</h3>' +
+          '<p>Start your first session to begin tracking.</p>' +
+          '<a href="bac-calculator.html">Start session</a>' +
+        '</div>';
+      return;
+    }
+
+    header.hidden = false;
+    var n = top.length;
+    body.innerHTML = top.map(function (s, i) {
+      var label = 'Session ' + (i + 1);
+      var st = (s && s.status) ? esc(s.status) : '—';
+      return (
+        '<div class="session-item">' +
+          '<div class="session-icon" style="background: rgba(200,240,77,0.1);">🍺</div>' +
+          '<div class="session-meta">' +
+            '<div class="session-name">' + label + '</div>' +
+            '<div class="session-date">' + formatWhen(s.started_at) + '</div>' +
+          '</div>' +
+          '<span class="session-status-pill">' + st + '</span>' +
+        '</div>'
+      );
+    }).join('');
   })();
 
   // Animate progress bars on load
