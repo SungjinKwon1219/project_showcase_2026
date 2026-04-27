@@ -36,7 +36,7 @@ elif gender == "f":
       elif fat == "mid":
             r_coefficient += f_mid
 else:
-      r_coefficient == n_i + n_age * age + n_weight * weight + n_height * height
+      r_coefficient = n_i + n_age * age + n_weight * weight + n_height * height
       if fat == "low":
             r_coefficient += n_low
       elif fat == "mid":
