@@ -22,21 +22,22 @@ n_height = 0.0021444658
 n_low = 0.1388081199
 n_mid = 0.0756061038
 
-if gender = "m":
+#takes weight as kg and height as cm
+if gender == "m":
       r_coefficient = m_i + m_age * age + m_weight * weight + m_height * height
-      if weight = "low":
+      if fat == "low":
             r_coefficient += m_low
-      else if weight = "mid":
+      elif fat == "mid":
             r_coefficient += m_mid
-else if gender = "f":
+elif gender == "f":
       r_coefficient = f_i + f_age * age + f_weight * weight + f_height * height
-      if weight = "low":
+      if fat == "low":
             r_coefficient += f_low
-      else if weight = "mid":
+      elif fat == "mid":
             r_coefficient += f_mid
 else:
-      r_coefficient = n_i + n_age * age + n_weight * weight + n_height * height
-      if weight = "low":
+      r_coefficient == n_i + n_age * age + n_weight * weight + n_height * height
+      if fat == "low":
             r_coefficient += n_low
-      else if weight = "mid":
+      elif fat == "mid":
             r_coefficient += n_mid
