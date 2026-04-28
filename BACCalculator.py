@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Iterable
 
+import numpy as np
+import math as math
 
 DEFAULT_BETA_PER_HOUR = 0.015
 DEFAULT_BETA_SD = 0.0025
@@ -160,12 +162,28 @@ def personalize_beta(
     ]
     if not valid_betas:
         return clamp(prior_beta, MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR)
+        
+    #Takes all estimated beta as input to create observed distribution
+    data_Observed = np.array(valid_betas)
+    sigma_Oserved = data_Observed.std()
+    weight = 0.1 + 0.4 * math.exp(-len(beta) + 2)
+    
+    #Prior distribution weight determined by sd of prior
+    mu0, tau0 = 0.015, 0.0025
+    #Initial result
+    updated_beta = normal_posterior(data_Observed, sigma_Oserved, mu0, tau0)
 
-    n = len(valid_betas)
-    session_mean = sum(valid_betas) / n
-    personalized = (prior_weight * prior_beta + n * session_mean) / (prior_weight + n)
-    return clamp(personalized, MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR)
+    #Weighted result
+    weighted_beta = updated_beta * (1 - weight) + mu0 * weight
+    return clamp(weighted_beta, MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR)
 
+#comparing two
+def normal_posterior(data, sigma, mu0, tau0):
+    n = len(data)
+    xbar = data.mean()
+    var_post = 1 / (1/tau0**2 + n/sigma**2)
+    mu_post = var_post * (mu0/tau0**2 + (n * xbar)/sigma**2)
+    return mu_post
 
 def estimate_beta(
     profile: dict | None = None,
