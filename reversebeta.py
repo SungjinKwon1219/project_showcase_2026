@@ -36,14 +36,12 @@ final_drunkness = 0.02
 user_weight = 75
 user_r = 0.68
 
-total_final_alc = sum(grams_alc)
-start_time = 0
-subtract_factor = 0
-
 #Checking if BAC ever reaches zero durring session requires at least two drinks
 #Implies rate of alcohol absorbtion is lower than elimination and body has processed all absorbed alcohol already
 #Sets new time zero to the time of next shot and subtracts volume of alcohol absorbed before that
 i0 = 0
+subtract_factor = 0
+
 if len(times_drink) >= 2:
     for i in range(0, (len(times_drink) - 1)):
         current_alc = 0
@@ -55,5 +53,8 @@ if len(times_drink) >= 2:
 
 #Calculate off of 0.02% as the functionaly sober range
 total_g_alc = sum(grams_alc) - subtract_factor
+start_time = times_drink[i0]
 
-beta = -(final_drunkness - (total_g_alc / (user_weight * 1000 * user_r))*100) / sober_time
+beta = -(final_drunkness - (total_g_alc / (user_weight * 1000 * user_r))*100) / (sober_time - start_time)
+
+print(beta)
