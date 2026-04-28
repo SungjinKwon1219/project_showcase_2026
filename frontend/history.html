@@ -64,6 +64,20 @@
   .btn-sm-ghost:hover { border-color: var(--border-bright); color: var(--text); }
   .btn-sm-accent { background: var(--accent); color: #0F1A00; border: none; font-weight: 500; }
   .btn-sm-accent:hover { box-shadow: 0 0 18px var(--accent-glow); }
+  .btn-sm-danger { background: rgba(255,107,107,0.1); color: var(--red); border: 1px solid rgba(255,107,107,0.28); font-weight: 600; }
+  .btn-sm-danger:hover { border-color: rgba(255,107,107,0.48); background: rgba(255,107,107,0.16); }
+  .history-notice {
+    display: none;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(200,240,77,0.22);
+    background: rgba(200,240,77,0.08);
+    color: var(--muted-mid);
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    font-size: 0.84rem;
+    line-height: 1.45;
+  }
+  .history-notice.visible { display: block; }
 
   /* SUMMARY ROW */
   .summary-row {
@@ -165,7 +179,21 @@
   }
 
   .td-session { display: flex; align-items: center; gap: 0.75rem; }
-  .td-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+  .td-icon {
+    min-width: 54px;
+    height: 32px;
+    padding: 0 0.55rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
   .td-name { font-weight: 500; color: var(--text); }
   .td-date { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
 
@@ -269,6 +297,7 @@
   .review-field select:focus,
   .review-field textarea:focus { border-color: var(--accent); }
   .review-actions { display: flex; justify-content: flex-end; }
+  .detail-actions { display: flex; justify-content: flex-end; margin-top: 0.25rem; }
   .review-confirmation {
     background: rgba(200,240,77,0.1);
     border: 1px solid rgba(200,240,77,0.24);
@@ -312,7 +341,6 @@
   <a href="history.html" class="nav-item active"><span class="nav-icon">◷</span><span>History</span></a>
   <div class="sidebar-section">Account</div>
   <a href="input.html" class="nav-item"><span class="nav-icon">◉</span><span>My Profile</span></a>
-  <a href="#" class="nav-item"><span class="nav-icon">⚙</span><span>Settings</span></a>
   <div class="sidebar-bottom">
     <div class="user-pill">
       <div class="user-avatar">IL</div>
@@ -326,13 +354,15 @@
   <div class="topbar">
     <div class="page-heading">
       <h1>Session History</h1>
-      <p>Sessions saved on this device · BAC estimates will layer on later</p>
+      <p>Sessions saved on this device · latest estimates come from saved prediction snapshots</p>
     </div>
     <div style="display:flex; gap: 0.75rem;">
       <button class="btn-sm btn-sm-ghost">Export CSV</button>
       <a href="bac-calculator.html"><button class="btn-sm btn-sm-accent">+ Log Session</button></a>
     </div>
   </div>
+
+  <div class="history-notice" id="historyNotice" role="status"></div>
 
   <!-- SUMMARY -->
   <div class="summary-row">
@@ -362,7 +392,7 @@
           <div class="table-title">All Sessions</div>
           <div class="table-sub">Local data only · click a row for details</div>
         </div>
-        <input class="search-input" type="text" id="sessionSearch" placeholder="🔍 Filter by id or status…" autocomplete="off">
+        <input class="search-input" type="text" id="sessionSearch" placeholder="Filter by id or status..." autocomplete="off">
       </div>
       <table>
         <thead>
@@ -372,8 +402,9 @@
             <th>Status</th>
             <th>Drink events</th>
             <th>Total std drinks</th>
-            <th>Latest estimated range</th>
+            <th>Latest session estimate</th>
             <th>Review</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody id="sessionsTable"></tbody>
@@ -461,6 +492,32 @@
     return '<span class="' + cls + '">' + escapeHtml(label) + '</span>';
   }
 
+  function normalizeDrinkAlcohol(e) {
+    var gramsRaw = Number(e && e.grams_alcohol);
+    var stdRaw = Number(e && e.standard_drinks);
+    var grams = Number.isFinite(gramsRaw) && gramsRaw >= 0 ? gramsRaw : null;
+    var std = Number.isFinite(stdRaw) && stdRaw >= 0 ? stdRaw : null;
+    if (grams == null && std != null) grams = std * 14;
+    if (std == null && grams != null) std = grams / 14;
+    return {
+      grams_alcohol: grams || 0,
+      standard_drinks: std || 0
+    };
+  }
+
+  function summarizeDrinkEvents(events) {
+    var drinkEvents = Array.isArray(events)
+      ? events.filter(function (e) { return e && e.event_type === 'drink'; })
+      : [];
+    return drinkEvents.reduce(function (acc, e) {
+      var normalized = normalizeDrinkAlcohol(e);
+      acc.count += 1;
+      acc.standard_drinks += normalized.standard_drinks;
+      acc.grams_alcohol += normalized.grams_alcohol;
+      return acc;
+    }, { count: 0, standard_drinks: 0, grams_alcohol: 0 });
+  }
+
   function renderTable() {
     var tbody = document.getElementById('sessionsTable');
     tbody.innerHTML = '';
@@ -469,7 +526,7 @@
     if (list.length === 0) {
       var tr = document.createElement('tr');
       var td = document.createElement('td');
-      td.colSpan = 7;
+      td.colSpan = 8;
       td.className = 'empty-state';
       if (sortedSessions.length === 0) {
         td.innerHTML = 'No sessions saved yet. <a href="bac-calculator.html">Start a session</a> on the BAC Calculator page.';
@@ -501,22 +558,21 @@
 
       var inp = s.inputs || {};
       var events = Array.isArray(s.events) ? s.events : [];
-      var drinkEvents = events.filter(function (e) { return e && e.event_type === 'drink'; });
-      var drinkCount = drinkEvents.length;
-      var totalStd = drinkEvents.reduce(function (sum, e) { return sum + (Number(e.standard_drinks) || 0); }, 0);
+      var drinkSummary = summarizeDrinkEvents(events);
       var snap = s.prediction_snapshot || null;
       var range = snap ? (Number(snap.bac_low).toFixed(3) + ' - ' + Number(snap.bac_high).toFixed(3)) : 'No prediction yet';
       tr.innerHTML =
         '<td><div class="td-session">' +
-          '<div class="td-icon" style="background: rgba(200,240,77,0.1);">🍺</div>' +
+          '<div class="td-icon" style="background: rgba(200,240,77,0.1);">Session</div>' +
           '<div><div class="td-name">' + escapeHtml(s.title || shortId(s.session_id)) + '</div>' +
           '<div class="td-date mono">' + escapeHtml(s.session_id || '') + '</div></div></div></td>' +
         '<td>' + escapeHtml(formatWhen(s.started_at)) + '</td>' +
         '<td><span class="' + statusBadgeClass(s.status) + '">' + escapeHtml(s.status || '—') + '</span></td>' +
-        '<td>' + escapeHtml(String(drinkCount)) + '</td>' +
-        '<td>' + escapeHtml(totalStd.toFixed(2)) + '</td>' +
+        '<td>' + escapeHtml(String(drinkSummary.count)) + '</td>' +
+        '<td>' + escapeHtml(drinkSummary.standard_drinks.toFixed(2)) + '</td>' +
         '<td>' + escapeHtml(range) + '</td>' +
-        '<td>' + reviewStatusHtml(s) + '</td>';
+        '<td>' + reviewStatusHtml(s) + '</td>' +
+        '<td><button type="button" class="btn-sm btn-sm-danger delete-session-btn" data-session-id="' + escapeHtml(s.session_id || '') + '">Delete</button></td>';
 
       tr.addEventListener('click', function () {
         document.querySelectorAll('#sessionsTable tr').forEach(function (r) { r.classList.remove('selected'); });
@@ -524,6 +580,13 @@
         selectedSessionId = s.session_id || '';
         showDetail(s);
       });
+      var deleteButton = tr.querySelector('.delete-session-btn');
+      if (deleteButton) {
+        deleteButton.addEventListener('click', function (event) {
+          event.stopPropagation();
+          handleDeleteSession(s.session_id);
+        });
+      }
       tbody.appendChild(tr);
     });
 
@@ -553,13 +616,15 @@
     stEl.style.color = s.status === 'completed' ? 'var(--accent)' : 'var(--blue)';
 
     var body = document.getElementById('detailBody');
+    var eventSummary = summarizeDrinkEvents(s.events);
     var rows = [
       ['Full session ID', s.session_id || '—'],
       ['Schema version', String(s.schema_version != null ? s.schema_version : '—')],
       ['Title', s.title || '—'],
-      ['Drink events', String((Array.isArray(s.events) ? s.events.filter(function (e) { return e && e.event_type === 'drink'; }).length : 0))],
+      ['Drink events', String(eventSummary.count)],
       ['Symptom events', String((Array.isArray(s.events) ? s.events.filter(function (e) { return e && e.event_type === 'symptom'; }).length : 0))],
-      ['Total standard drinks', String((Array.isArray(s.events) ? s.events.filter(function (e) { return e && e.event_type === 'drink'; }).reduce(function (sum, e) { return sum + (Number(e.standard_drinks) || 0); }, 0).toFixed(2) : '0.00'))],
+      ['Total standard drinks', eventSummary.standard_drinks.toFixed(2)],
+      ['Total grams ethanol', eventSummary.grams_alcohol.toFixed(1)],
       ['Drink type', inp.drink_type || '—'],
       ['Hours elapsed', String(inp.hours_elapsed != null ? inp.hours_elapsed : '—')],
       ['Food intake', inp.food_intake || '—'],
@@ -570,18 +635,69 @@
       ['Hangover severity', fb.hangover_severity != null ? String(fb.hangover_severity) : '—'],
       ['Blackout', fb.blackout != null ? String(fb.blackout) : '—'],
       ['Vomiting', fb.vomiting != null ? String(fb.vomiting) : '—'],
-      ['Latest BAC estimate', s.prediction_snapshot ? Number(s.prediction_snapshot.bac_estimate).toFixed(3) : 'No prediction yet'],
-      ['Latest BAC range', s.prediction_snapshot ? (Number(s.prediction_snapshot.bac_low).toFixed(3) + ' - ' + Number(s.prediction_snapshot.bac_high).toFixed(3)) : 'No prediction yet'],
+      ['Latest session estimate', s.prediction_snapshot ? Number(s.prediction_snapshot.bac_estimate).toFixed(3) : 'No prediction yet'],
+      ['Latest session range', s.prediction_snapshot ? (Number(s.prediction_snapshot.bac_low).toFixed(3) + ' - ' + Number(s.prediction_snapshot.bac_high).toFixed(3)) : 'No prediction yet'],
+      ['Snapshot model', s.prediction_snapshot ? (s.prediction_snapshot.model_version || 'legacy snapshot') : 'No prediction yet'],
+      ['Model status', s.prediction_snapshot ? (s.prediction_snapshot.model_status || 'legacy snapshot') : 'No prediction yet'],
+      ['Personalization', s.prediction_snapshot ? (s.prediction_snapshot.personalization || 'unknown') : 'No prediction yet'],
       ['Post-session review', reviewStatusLabel(s)]
     ];
     body.innerHTML = rows.map(function (pair) {
       return '<div class="detail-row"><span class="detail-key">' + escapeHtml(pair[0]) + '</span>' +
         '<span class="detail-value">' + escapeHtml(pair[1]) + '</span></div>';
     }).join('') +
+      '<div class="detail-actions"><button type="button" class="btn-sm btn-sm-danger" id="detailDeleteSessionBtn">Delete Session</button></div>' +
       renderReviewSection(s);
 
+    var deleteBtn = document.getElementById('detailDeleteSessionBtn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', function () {
+        handleDeleteSession(s.session_id);
+      });
+    }
     var form = document.getElementById('postSessionReviewForm');
     if (form) form.addEventListener('submit', handleReviewSubmit);
+  }
+
+  function showNotice(message) {
+    var notice = document.getElementById('historyNotice');
+    if (!notice) return;
+    notice.textContent = message;
+    notice.classList.add('visible');
+  }
+
+  function clearDetailPanel(message) {
+    document.getElementById('detailTitle').textContent = '—';
+    document.getElementById('detailDate').textContent = message || 'Select a session';
+    document.getElementById('detailStatus').textContent = '';
+    document.getElementById('detailBody').innerHTML =
+      '<p class="detail-key" style="text-align:center;">Details appear when you select a row.</p>';
+  }
+
+  function handleDeleteSession(sessionId) {
+    if (!sessionId) return;
+    if (!window.confirm('Delete this session? This cannot be undone.')) return;
+
+    var result = typeof S.deleteSession === 'function'
+      ? S.deleteSession(sessionId)
+      : { deleted: false };
+    if (!result || !result.deleted) {
+      showNotice('Session could not be deleted. It may have already been removed.');
+      loadSorted();
+      updateSummary();
+      renderTable();
+      return;
+    }
+
+    if (selectedSessionId === sessionId) {
+      selectedSessionId = '';
+      clearDetailPanel('Session deleted');
+    }
+    lastReviewSavedSessionId = '';
+    loadSorted();
+    updateSummary();
+    renderTable();
+    showNotice(result.was_active ? 'Session deleted. Active session was cleared.' : 'Session deleted.');
   }
 
   function optionRange(maxValue) {

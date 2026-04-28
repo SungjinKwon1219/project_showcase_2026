@@ -28,6 +28,10 @@ class PredictEndpointLogicTests(unittest.TestCase):
         self.assertIn("model", result)
         self.assertIn("bac", result)
         self.assertIn("meta", result)
+        self.assertIn("status", result["model"])
+        self.assertEqual(result["model"]["status"], "scaffold")
+        self.assertEqual(result["model"]["coefficient_source"], "placeholder_or_literature_default")
+        self.assertEqual(result["model"]["personalization"], "not_enabled")
 
     def test_predict_rejects_negative_weight(self):
         payload = self._valid_payload()

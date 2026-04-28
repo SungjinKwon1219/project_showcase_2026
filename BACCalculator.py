@@ -24,7 +24,8 @@ MAX_BETA_PER_HOUR = 0.030
 
 # Linear regression coefficients for r estimation.
 # NOTE: These are currently hardcoded placeholders unless source/provenance is
-# documented elsewhere in the project.
+# documented elsewhere in the project. Future fitted regression/statistical
+# models should replace these internals while preserving the public helpers.
 m_i = 0.3901319484
 m_age = 0.0003273190
 m_weight = -0.0009810014

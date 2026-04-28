@@ -15,6 +15,13 @@ from BACCalculator import calculate_bac_range, estimate_beta, r_coefficient
 
 HOST = "0.0.0.0"
 PORT = 8000
+MODEL_NAME = "widmark-deterministic-scaffold-v1"
+MODEL_STATUS = "scaffold"
+COEFFICIENT_SOURCE = "placeholder_or_literature_default"
+PERSONALIZATION_STATUS = "not_enabled"
+
+# Keep the /predict response shape stable as fitted statistical models replace
+# the current scaffold internals; clients should read model metadata fields.
 
 
 def _json_error(message: str, status: int = 400) -> tuple[dict[str, Any], int]:
@@ -109,9 +116,12 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "time": "hours",
         },
         "model": {
-            "name": "widmark-deterministic-v1",
+            "name": MODEL_NAME,
+            "status": MODEL_STATUS,
             "r": round(r, 6),
             "beta_per_hour": round(beta_per_hour, 6),
+            "coefficient_source": COEFFICIENT_SOURCE,
+            "personalization": PERSONALIZATION_STATUS,
         },
         "bac": {
             "low": round(float(bac["low"]), 6),

@@ -153,6 +153,40 @@
     return true;
   }
 
+  function deleteSession(sessionId) {
+    if (!sessionId) {
+      return { deleted: false, session_id: null, was_active: false };
+    }
+    var all = getSessions();
+    var kept = [];
+    var deleted = null;
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].session_id === sessionId) {
+        deleted = all[i];
+      } else {
+        kept.push(all[i]);
+      }
+    }
+    if (!deleted) {
+      return { deleted: false, session_id: sessionId, was_active: false };
+    }
+
+    var wasActive = false;
+    try {
+      wasActive = global.localStorage.getItem(ACTIVE_KEY) === sessionId;
+    } catch (e) { /* ignore */ }
+
+    saveSessions(kept);
+    if (wasActive) clearActiveDraftSessionId();
+
+    return {
+      deleted: true,
+      session_id: sessionId,
+      was_active: wasActive,
+      deleted_session: deleted
+    };
+  }
+
   function getActiveDraftSession() {
     try {
       var id = global.localStorage.getItem(ACTIVE_KEY);
@@ -303,6 +337,7 @@
     createSession: createSession,
     getSessionById: getSessionById,
     updateSession: updateSession,
+    deleteSession: deleteSession,
     getActiveDraftSession: getActiveDraftSession,
     getOrCreateActiveDraftSession: getOrCreateActiveDraftSession,
     setActiveDraftSessionId: setActiveDraftSessionId,
