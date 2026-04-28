@@ -231,6 +231,55 @@
         </div>
       </div>
 
+      <div class="panel-section">
+        <div class="panel-title">📝 Session Logging</div>
+        <div class="field" style="margin-bottom:0.75rem;">
+          <label>Active session</label>
+          <div id="sessionStatusText" style="font-size:0.82rem;color:var(--muted-mid);">No active session</div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <button class="submit-btn" type="button" id="btnStartSession" style="padding:0.7rem;font-size:0.88rem;">Start Session</button>
+          </div>
+          <div class="field">
+            <button class="submit-btn" type="button" id="btnEndSession" style="padding:0.7rem;font-size:0.88rem;background:#2a3347;color:var(--text);">End Session</button>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <button class="submit-btn" type="button" id="btnLogOneDrink" style="padding:0.7rem;font-size:0.88rem;">Log 1 Drink</button>
+          </div>
+          <div class="field">
+            <label>Custom drinks</label>
+            <input type="number" id="customDrinksInput" min="0" step="0.5" placeholder="e.g. 1.5">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Custom grams ethanol</label>
+            <input type="number" id="customGramsInput" min="0" step="1" placeholder="e.g. 21">
+          </div>
+          <div class="field">
+            <button class="submit-btn" type="button" id="btnLogCustomDrink" style="padding:0.7rem;font-size:0.88rem;">Log Custom Drink</button>
+          </div>
+        </div>
+        <div class="field-row" style="margin-bottom:0;">
+          <div class="field">
+            <label>Symptom</label>
+            <select id="symptomType">
+              <option value="vomit">Vomit</option>
+              <option value="heavy_intoxication">Heavy intoxication</option>
+              <option value="blackout_concern">Blackout concern</option>
+              <option value="felt_sober">Felt sober</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <button class="submit-btn" type="button" id="btnLogSymptom" style="padding:0.7rem;font-size:0.88rem;background:#2a3347;color:var(--text);">Log Symptom</button>
+          </div>
+        </div>
+      </div>
+
       <div class="panel-section" style="border-bottom:none;">
         <button class="submit-btn" id="calcBtn" onclick="computeBAC()">
           Calculate My BAC
@@ -246,7 +295,7 @@
       <div class="result-hero">
         <div class="result-bac-label">Estimated Current BAC</div>
         <div class="result-bac-val" id="bacDisplay" style="color:var(--accent);">—</div>
-        <div class="result-bac-unit">%</div>
+        <div class="result-bac-unit">BAC</div>
         <div>
           <span class="result-status status-safe" id="bacStatus">
             <span class="status-dot" style="background:var(--accent);"></span>
@@ -257,15 +306,15 @@
         <div class="result-detail-row">
           <div class="result-detail">
             <div class="result-detail-val" id="peakBac">—</div>
-            <div class="result-detail-label">Predicted peak BAC</div>
+            <div class="result-detail-label">Low estimate</div>
           </div>
           <div class="result-detail">
             <div class="result-detail-val" id="soberTime">—</div>
-            <div class="result-detail-label">Est. time to sober</div>
+            <div class="result-detail-label">High estimate</div>
           </div>
           <div class="result-detail">
             <div class="result-detail-val" id="safeAdd">—</div>
-            <div class="result-detail-label">Safe to add</div>
+            <div class="result-detail-label">Model note</div>
           </div>
         </div>
       </div>
@@ -290,8 +339,8 @@
             <line x1="0" y1="72" x2="520" y2="72" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
             <line x1="0" y1="108" x2="520" y2="108" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
             <line x1="0" y1="144" x2="520" y2="144" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-            <line x1="0" y1="72" x2="520" y2="72" stroke="rgba(255,107,107,0.35)" stroke-width="1" stroke-dasharray="5,4"/>
-            <text x="8" y="68" font-size="9" fill="rgba(255,107,107,0.65)" font-family="DM Sans">0.08%</text>
+          <line x1="0" y1="72" x2="520" y2="72" stroke="rgba(255,107,107,0.35)" stroke-width="1" stroke-dasharray="5,4"/>
+          <text x="8" y="68" font-size="9" fill="rgba(255,107,107,0.65)" font-family="DM Sans">0.08</text>
             <path id="curveArea" d="M0 180 L520 180 Z" fill="url(#curveGrad)"/>
             <path id="curveLine" d="M0 180 L520 180" fill="none" stroke="#C8F04D" stroke-width="2.5" stroke-linecap="round"/>
             <circle id="currentDot" cx="0" cy="180" r="5" fill="#C8F04D" filter="drop-shadow(0 0 6px #C8F04D)" visibility="hidden"/>
@@ -303,25 +352,25 @@
         </div>
         <div class="legend">
           <div class="legend-item"><div class="legend-line" style="background:var(--accent);"></div> Your BAC</div>
-          <div class="legend-item"><div class="legend-line" style="background:var(--red);height:1px;border-top:1px dashed var(--red);"></div> Legal limit (0.08%)</div>
+          <div class="legend-item"><div class="legend-line" style="background:var(--red);height:1px;border-top:1px dashed var(--red);"></div> Common legal driving threshold (0.08)</div>
         </div>
       </div>
 
       <div class="tip-card">
         <span class="tip-icon">💡</span>
         <p class="tip-text" id="tipText">
-          <strong>Calculate your BAC</strong> to see personalized recommendations based on your biological profile.
+          <strong>Estimate only.</strong> This is not legal or medical advice and should not be used to decide whether to drive.
         </p>
       </div>
     </div>
   </div>
 </main>
 
+<script src="session-storage.js"></script>
 <script>
-  // ── Replace with your deployed API URL once hosted ──
-  const API_URL = 'http://localhost:8000/r-coefficient';
+  const API_URL = 'http://localhost:8000/predict';
+  const PROFILE_STORAGE_KEY = 'safer_user_profile';
 
-  // Sex toggle
   document.querySelectorAll('#sexGroup button').forEach(btn => {
     btn.addEventListener('click', function() {
       this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
@@ -336,10 +385,12 @@
     computeBAC();
   }
 
-  // ── Read inputs ──
   function getGender() {
     const active = document.querySelector('#sexGroup button.active');
-    return active ? active.dataset.val : 'm';
+    const raw = active ? active.dataset.val : 'm';
+    if (raw === 'm') return 'male';
+    if (raw === 'f') return 'female';
+    return 'other';
   }
 
   function getFat() {
@@ -351,56 +402,116 @@
     return 'high';
   }
 
-  // ── Main compute — async so we can await the API ──
-  let debounceTimer = null;
-  function computeBAC() {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(doCompute, 350);
+  function readStoredProfile() {
+    try {
+      const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return data && typeof data === 'object' ? data : null;
+    } catch (e) {
+      return null;
+    }
   }
 
-  async function doCompute() {
+  function estimateAgeYearsFromBand(ageBand) {
+    const map = { '21-30': 25, '31-40': 35, '41-50': 45, '51-60': 55, '61-70': 65, '71+': 75 };
+    return map[ageBand] || null;
+  }
+
+  function bodyFatBracketFromPercent(bodyFatPercent) {
+    if (bodyFatPercent < 15) return 'low';
+    if (bodyFatPercent <= 25) return 'mid';
+    return 'high';
+  }
+
+  function getProfileForPredict() {
+    const stored = readStoredProfile();
+    if (stored) {
+      const sex = stored.sex === 'male' ? 'male' : stored.sex === 'female' ? 'female' : getGender();
+      const ageYears = estimateAgeYearsFromBand(stored.age_band) || (parseInt(document.getElementById('ageInput').value, 10) || 20);
+      const weightKg = Number(stored.weight_lbs) > 0 ? Number(stored.weight_lbs) * 0.453592 : (parseFloat(document.getElementById('weightInput').value) || 150) * 0.453592;
+      const heightCm = Number(stored.height_in) > 0 ? Number(stored.height_in) * 2.54 : (parseFloat(document.getElementById('heightInput').value) || 69) * 2.54;
+      const bodyFatPercent = Number(stored.body_fat_percent);
+      return {
+        sex,
+        ageYears,
+        weightKg,
+        heightCm,
+        bodyFatPercent: Number.isFinite(bodyFatPercent) ? bodyFatPercent : null,
+        bodyFatBracket: Number.isFinite(bodyFatPercent) ? bodyFatBracketFromPercent(bodyFatPercent) : getFat(),
+      };
+    }
+    const weightLbs = parseFloat(document.getElementById('weightInput').value) || 150;
+    const heightIn = parseFloat(document.getElementById('heightInput').value) || 69;
+    return {
+      sex: getGender(),
+      ageYears: parseInt(document.getElementById('ageInput').value, 10) || 20,
+      weightKg: weightLbs * 0.453592,
+      heightCm: heightIn * 2.54,
+      bodyFatPercent: null,
+      bodyFatBracket: getFat(),
+    };
+  }
+
+  function buildPredictPayload(profile, sessionData) {
+    return {
+      profile: {
+        sex: profile.sex,
+        age_years: profile.ageYears,
+        height_cm: profile.heightCm,
+        weight_kg: profile.weightKg,
+        body_fat_percent: profile.bodyFatPercent,
+        body_fat_bracket: profile.bodyFatBracket
+      },
+      session: {
+        standard_drinks: sessionData.standardDrinks,
+        grams_alcohol: sessionData.gramsAlcohol,
+        hours_elapsed: sessionData.hoursElapsed
+      }
+    };
+  }
+
+  function summarizeSessionEvents(session) {
+    const events = Array.isArray(session.events) ? session.events : [];
+    const drinkEvents = events.filter(e => e && e.event_type === 'drink');
+    const gramsAlcohol = drinkEvents.reduce((sum, e) => sum + (Number(e.grams_alcohol) || 0), 0);
+    const standardDrinks = drinkEvents.reduce((sum, e) => sum + (Number(e.standard_drinks) || 0), 0);
+    const startedAt = new Date(session.started_at || Date.now()).getTime();
+    const now = Date.now();
+    const hoursElapsed = Math.max(0, (now - startedAt) / 3600000);
+    return { gramsAlcohol, standardDrinks, hoursElapsed, drinkEventsCount: drinkEvents.length };
+  }
+
+  function persistPredictionSnapshot(snapshot, sessionId) {
+    if (typeof window.SaferSessionStorage === 'undefined') return;
+    try {
+      let session = sessionId
+        ? window.SaferSessionStorage.getSessionById(sessionId)
+        : window.SaferSessionStorage.getActiveDraftSession();
+      if (!session) session = window.SaferSessionStorage.createSession();
+      session.prediction_snapshot = snapshot;
+      session.updated_at = new Date().toISOString();
+      window.SaferSessionStorage.updateSession(session);
+    } catch (e) {
+      // Non-blocking persistence failure.
+    }
+  }
+
+  async function requestPredictAndRender(payload, sessionIdForSnapshot) {
     const btn = document.getElementById('calcBtn');
     btn.disabled = true;
     btn.innerHTML = 'Calculating…';
     document.getElementById('errorCard').style.display = 'none';
 
-    // Collect inputs
-    const drinks    = parseFloat(document.getElementById('drinksSlider').value);
-    const weightLbs = parseFloat(document.getElementById('weightInput').value) || 150;
-    const hours     = parseFloat(document.getElementById('hoursSlider').value);
-    const sleep     = parseFloat(document.getElementById('sleepSlider').value);
-    const age       = parseInt(document.getElementById('ageInput').value) || 20;
-    const heightIn  = parseFloat(document.getElementById('heightInput').value) || 69;
-    const gender    = getGender();
-    const fat       = getFat();
-
-    // Convert to units the API expects (kg, cm)
-    const weightKg  = weightLbs * 0.453592;
-    const heightCm  = heightIn  * 2.54;
-
-    // Modifiers for beta
-    const hydBtn   = document.querySelector('#hydGroup .active');
-    const hydMap   = { '🥵 Dehydrated': -0.002, '💧 Normal': 0, '🌊 Well hydrated': 0.002 };
-    const hydDelta = hydBtn ? (hydMap[hydBtn.textContent.trim()] || 0) : 0;
-
-    const foodBtn   = document.querySelector('#foodGroup .active');
-    const foodMap   = { '🚫 Empty': -0.002, '🥗 Light': 0, '🍔 Full meal': 0.003 };
-    const foodDelta = foodBtn ? (foodMap[foodBtn.textContent.trim()] || 0) : 0;
-
-    const sleepDelta = sleep < 6 ? -0.002 : sleep > 8 ? 0.001 : 0;
-    const beta       = 0.015 + hydDelta + foodDelta + sleepDelta;
-
-    // ── Call your Python API for personalised r ──
-    let r;
+    let prediction;
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ age, gender, weight: weightKg, height: heightCm, fat })
+        body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error('API error ' + res.status);
-      const data = await res.json();
-      r = data.r;
+      prediction = await res.json();
     } catch (err) {
       document.getElementById('errorCard').style.display = 'block';
       btn.disabled = false;
@@ -408,54 +519,188 @@
       return;
     }
 
-    // ── BAC formula ──
-    // A = grams of alcohol, W = body weight in grams
-    const A = drinks * 14;
-    const W = weightKg * 1000; // convert kg → g
+    const r = prediction.model.r;
+    const beta = prediction.model.beta_per_hour;
+    const lowBAC = prediction.bac.low;
+    const estBAC = prediction.bac.estimate;
+    const highBAC = prediction.bac.high;
+    const disclaimer = (prediction.meta && prediction.meta.disclaimer)
+      ? prediction.meta.disclaimer
+      : 'Estimate only; not legal or medical advice. Do not use this to decide whether to drive.';
 
-    const rawBAC  = Math.max(0, (A / (r * W)) * 100 - beta * hours);
-    const peakBAC = Math.max(0, (A / (r * W)) * 100 - beta * Math.max(0, hours - 0.5));
-
-    // ── Update UI ──
     const bacEl = document.getElementById('bacDisplay');
-    bacEl.textContent = rawBAC.toFixed(3);
-    bacEl.style.color = rawBAC < 0.05 ? 'var(--accent)' : rawBAC < 0.08 ? 'var(--orange)' : 'var(--red)';
-
-    document.getElementById('rDisplay').textContent   = r.toFixed(3);
+    bacEl.textContent = estBAC.toFixed(3);
+    bacEl.style.color = estBAC < 0.05 ? 'var(--accent)' : estBAC < 0.08 ? 'var(--orange)' : 'var(--red)';
+    document.getElementById('rDisplay').textContent = r.toFixed(3);
     document.getElementById('graphRLabel').textContent = 'r̂ = ' + r.toFixed(3);
 
     const statusEl = document.getElementById('bacStatus');
-    if (rawBAC < 0.05) {
+    if (estBAC < 0.05) {
       statusEl.className = 'result-status status-safe';
-      statusEl.innerHTML = '<span class="status-dot" style="background:var(--accent);"></span> Below legal limit — drink responsibly';
-    } else if (rawBAC < 0.08) {
+      statusEl.innerHTML = '<span class="status-dot" style="background:var(--accent);"></span> Lower estimated risk right now';
+    } else if (estBAC < 0.08) {
       statusEl.className = 'result-status status-warn';
-      statusEl.innerHTML = '<span class="status-dot" style="background:var(--orange);"></span> Approaching legal limit — slow down';
+      statusEl.innerHTML = '<span class="status-dot" style="background:var(--orange);"></span> Elevated estimated risk; approaching 0.08 threshold';
     } else {
       statusEl.className = 'result-status status-danger';
-      statusEl.innerHTML = '<span class="status-dot" style="background:var(--red);"></span> Above legal limit — stop drinking';
+      statusEl.innerHTML = '<span class="status-dot" style="background:var(--red);"></span> Above common legal driving threshold';
     }
 
-    document.getElementById('peakBac').textContent = peakBAC.toFixed(3);
+    document.getElementById('peakBac').textContent = lowBAC.toFixed(3);
+    document.getElementById('soberTime').textContent = highBAC.toFixed(3);
+    document.getElementById('safeAdd').textContent = 'Range shown';
+    document.getElementById('safeAdd').style.color = 'var(--muted-mid)';
+    document.getElementById('tipText').innerHTML =
+      `<strong>Estimated BAC range:</strong> ${lowBAC.toFixed(3)}-${highBAC.toFixed(3)} · ` +
+      `<strong>Central:</strong> ${estBAC.toFixed(3)}<br>${disclaimer}`;
 
-    const soberTime = rawBAC > 0 ? (rawBAC / beta).toFixed(1) + ' hrs' : '0 hrs';
-    document.getElementById('soberTime').textContent = soberTime;
+    persistPredictionSnapshot({
+      r: Number(r.toFixed(6)),
+      beta_per_hour: Number(beta.toFixed(6)),
+      bac_low: Number(lowBAC.toFixed(6)),
+      bac_estimate: Number(estBAC.toFixed(6)),
+      bac_high: Number(highBAC.toFixed(6)),
+      model_version: prediction.model.name || 'widmark-deterministic-v1',
+      created_at: new Date().toISOString()
+    }, sessionIdForSnapshot);
 
-    const headroom    = 0.08 - rawBAC;
-    const drinksPerUnit = (14 / (r * W)) * 100;
-    const safeAdd     = Math.max(0, Math.floor(headroom / drinksPerUnit));
-    document.getElementById('safeAdd').textContent   = safeAdd > 0 ? '+' + safeAdd + ' more' : 'None';
-    document.getElementById('safeAdd').style.color   = safeAdd > 0 ? 'var(--accent)' : 'var(--red)';
-
-    document.getElementById('tipText').innerHTML = safeAdd > 0
-      ? `<strong>You're within a safe range.</strong> Based on your profile, you can have up to <strong>${safeAdd} more standard drink${safeAdd > 1 ? 's' : ''}</strong> while staying below 0.08%. BAC can lag ~30 mins behind consumption — pace yourself.`
-      : `<strong>Stop drinking.</strong> You've reached or exceeded the safe limit for your profile. Give it time — your estimated sober time is ${soberTime}.`;
-
-    updateGraph(rawBAC, beta, hours, r, W, A);
+    const hours = payload.session.hours_elapsed;
+    const weightKg = payload.profile.weight_kg;
+    const gramsAlcohol = payload.session.grams_alcohol;
+    // Temporary local graph rendering only. Source of truth remains /predict.
+    updateGraph(estBAC, beta, hours, r, weightKg * 1000, gramsAlcohol);
 
     btn.disabled = false;
     btn.innerHTML = 'Calculate My BAC <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   }
+
+  let debounceTimer = null;
+  function computeBAC() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(doCompute, 350);
+  }
+
+  async function doCompute() {
+    const profile = getProfileForPredict();
+    const drinks = parseFloat(document.getElementById('drinksSlider').value) || 0;
+    const hours = parseFloat(document.getElementById('hoursSlider').value) || 0;
+    const payload = buildPredictPayload(profile, {
+      standardDrinks: drinks,
+      gramsAlcohol: drinks * 14.0,
+      hoursElapsed: hours
+    });
+    await requestPredictAndRender(payload, null);
+  }
+
+  function updateSessionStatusUI() {
+    const el = document.getElementById('sessionStatusText');
+    if (!el || typeof window.SaferSessionStorage === 'undefined') return;
+    const active = window.SaferSessionStorage.getActiveDraftSession();
+    if (!active) {
+      el.textContent = 'No active session';
+      return;
+    }
+    const summary = summarizeSessionEvents(active);
+    el.textContent = `${active.title || 'Drinking session'} · ${summary.drinkEventsCount} drink events · ${summary.gramsAlcohol.toFixed(1)}g ethanol`;
+  }
+
+  async function recomputeFromActiveSession() {
+    if (typeof window.SaferSessionStorage === 'undefined') return;
+    const active = window.SaferSessionStorage.getActiveDraftSession();
+    if (!active) return;
+    const profile = getProfileForPredict();
+    const summary = summarizeSessionEvents(active);
+    active.inputs.drinks = summary.standardDrinks;
+    active.inputs.hours_elapsed = Number(summary.hoursElapsed.toFixed(3));
+    active.updated_at = new Date().toISOString();
+    window.SaferSessionStorage.updateSession(active);
+    updateSessionStatusUI();
+    const payload = buildPredictPayload(profile, {
+      standardDrinks: summary.standardDrinks,
+      gramsAlcohol: summary.gramsAlcohol,
+      hoursElapsed: summary.hoursElapsed
+    });
+    await requestPredictAndRender(payload, active.session_id);
+  }
+
+  function startSession() {
+    if (typeof window.SaferSessionStorage === 'undefined') return;
+    const title = 'Drinking session - ' + new Date().toLocaleString();
+    const session = window.SaferSessionStorage.createSession({ title: title });
+    window.SaferSessionStorage.setActiveDraftSessionId(session.session_id);
+    updateSessionStatusUI();
+  }
+
+  async function logOneDrink() {
+    if (typeof window.SaferSessionStorage === 'undefined') return;
+    const session = window.SaferSessionStorage.getOrCreateActiveDraftSession({ title: 'Drinking session - ' + new Date().toLocaleString() });
+    window.SaferSessionStorage.addEventToSession(session.session_id, {
+      event_type: 'drink',
+      timestamp: new Date().toISOString(),
+      standard_drinks: 1,
+      grams_alcohol: 14,
+      label: '1 standard drink'
+    });
+    await recomputeFromActiveSession();
+  }
+
+  async function logCustomDrink() {
+    if (typeof window.SaferSessionStorage === 'undefined') return;
+    const customDrinks = parseFloat(document.getElementById('customDrinksInput').value);
+    const customGrams = parseFloat(document.getElementById('customGramsInput').value);
+    let standardDrinks = 0;
+    let gramsAlcohol = 0;
+    if (Number.isFinite(customGrams) && customGrams > 0) {
+      gramsAlcohol = customGrams;
+      standardDrinks = customGrams / 14.0;
+    } else if (Number.isFinite(customDrinks) && customDrinks > 0) {
+      standardDrinks = customDrinks;
+      gramsAlcohol = customDrinks * 14.0;
+    } else {
+      alert('Enter a positive custom drink amount (standard drinks or grams).');
+      return;
+    }
+    const session = window.SaferSessionStorage.getOrCreateActiveDraftSession({ title: 'Drinking session - ' + new Date().toLocaleString() });
+    window.SaferSessionStorage.addEventToSession(session.session_id, {
+      event_type: 'drink',
+      timestamp: new Date().toISOString(),
+      standard_drinks: Number(standardDrinks.toFixed(3)),
+      grams_alcohol: Number(gramsAlcohol.toFixed(3)),
+      label: `${standardDrinks.toFixed(2)} standard drinks`
+    });
+    document.getElementById('customDrinksInput').value = '';
+    document.getElementById('customGramsInput').value = '';
+    await recomputeFromActiveSession();
+  }
+
+  function logSymptom() {
+    if (typeof window.SaferSessionStorage === 'undefined') return;
+    const symptomType = document.getElementById('symptomType').value;
+    const session = window.SaferSessionStorage.getOrCreateActiveDraftSession({ title: 'Drinking session - ' + new Date().toLocaleString() });
+    window.SaferSessionStorage.addEventToSession(session.session_id, {
+      event_type: 'symptom',
+      timestamp: new Date().toISOString(),
+      symptom_type: symptomType,
+      severity: 1,
+      notes: ''
+    });
+    updateSessionStatusUI();
+  }
+
+  function endSession() {
+    if (typeof window.SaferSessionStorage === 'undefined') return;
+    const active = window.SaferSessionStorage.getActiveDraftSession();
+    if (!active) return;
+    window.SaferSessionStorage.completeSession(active.session_id);
+    updateSessionStatusUI();
+  }
+
+  document.getElementById('btnStartSession').addEventListener('click', startSession);
+  document.getElementById('btnLogOneDrink').addEventListener('click', function () { logOneDrink(); });
+  document.getElementById('btnLogCustomDrink').addEventListener('click', function () { logCustomDrink(); });
+  document.getElementById('btnLogSymptom').addEventListener('click', logSymptom);
+  document.getElementById('btnEndSession').addEventListener('click', endSession);
+  updateSessionStatusUI();
 
   function updateGraph(bac, beta, hours, r, W, A) {
     const svgH = 180;
@@ -471,7 +716,7 @@
 
     for (let i = 0; i <= steps; i++) {
       const t = (i / steps) * totalH;
-      const b = Math.max(0, (A / (r * W)) * 100 - beta * t);
+      const b = Math.max(0, (A / (r * W)) - beta * t);
       const x = (i / steps) * 520;
       const y = bacToY(b);
       if (i === 0) { pathD = `M${x} ${y}`; areaD = `M${x} ${y}`; }

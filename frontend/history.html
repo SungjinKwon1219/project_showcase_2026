@@ -238,6 +238,48 @@
 
   .model-update strong { color: var(--accent); }
 
+  .review-panel {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem;
+    background: rgba(255,255,255,0.03);
+  }
+  .review-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem; }
+  .review-copy { font-size: 0.76rem; color: var(--muted-mid); line-height: 1.45; margin-bottom: 0.9rem; }
+  .review-form { display: flex; flex-direction: column; gap: 0.75rem; }
+  .review-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+  .review-field { display: flex; flex-direction: column; gap: 0.35rem; }
+  .review-field.full { grid-column: 1 / -1; }
+  .review-field label { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+  .review-field input,
+  .review-field select,
+  .review-field textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    padding: 0.55rem 0.65rem;
+    outline: none;
+  }
+  .review-field textarea { min-height: 76px; resize: vertical; }
+  .review-field input:focus,
+  .review-field select:focus,
+  .review-field textarea:focus { border-color: var(--accent); }
+  .review-actions { display: flex; justify-content: flex-end; }
+  .review-confirmation {
+    background: rgba(200,240,77,0.1);
+    border: 1px solid rgba(200,240,77,0.24);
+    border-radius: 12px;
+    color: var(--accent);
+    font-size: 0.78rem;
+    padding: 0.75rem;
+  }
+  .review-status-pending { color: var(--orange); font-weight: 600; }
+  .review-status-completed { color: var(--accent); font-weight: 600; }
+
   .empty-state {
     padding: 2.5rem 1.75rem;
     text-align: center;
@@ -307,8 +349,8 @@
       <div class="sum-val" id="sumDrafts" style="color: var(--blue);">0</div>
     </div>
     <div class="summary-card">
-      <div class="sum-label">BAC analytics</div>
-      <div class="sum-val" style="font-size: 1rem; color: var(--muted); font-weight: 500;">Soon</div>
+      <div class="sum-label">Pending Reviews</div>
+      <div class="sum-val warn" id="sumPendingReviews">0</div>
     </div>
   </div>
 
@@ -328,8 +370,10 @@
             <th>Session</th>
             <th>Started</th>
             <th>Status</th>
-            <th>Drinks</th>
-            <th>Hours</th>
+            <th>Drink events</th>
+            <th>Total std drinks</th>
+            <th>Latest estimated range</th>
+            <th>Review</th>
           </tr>
         </thead>
         <tbody id="sessionsTable"></tbody>
@@ -356,6 +400,8 @@
   var S = window.SaferSessionStorage;
   var sortedSessions = [];
   var filterText = '';
+  var selectedSessionId = '';
+  var lastReviewSavedSessionId = '';
 
   function shortId(id) {
     if (!id) return '—';
@@ -392,8 +438,27 @@
     var q = filterText.toLowerCase();
     return (
       (s.session_id && s.session_id.toLowerCase().indexOf(q) !== -1) ||
-      (s.status && s.status.toLowerCase().indexOf(q) !== -1)
+      (s.status && s.status.toLowerCase().indexOf(q) !== -1) ||
+      reviewStatusLabel(s).toLowerCase().indexOf(q) !== -1
     );
+  }
+
+  function isReviewPending(s) {
+    if (S && typeof S.isReviewPending === 'function') return S.isReviewPending(s);
+    return s && s.status === 'completed' && s.review_status !== 'completed' && !s.post_session_review;
+  }
+
+  function reviewStatusLabel(s) {
+    if (isReviewPending(s)) return 'Review pending';
+    if (s && (s.review_status === 'completed' || s.post_session_review)) return 'completed';
+    return s && s.status === 'completed' ? 'Review pending' : '—';
+  }
+
+  function reviewStatusHtml(s) {
+    var label = reviewStatusLabel(s);
+    var cls = label === 'Review pending' ? 'review-status-pending' :
+      label === 'completed' ? 'review-status-completed' : '';
+    return '<span class="' + cls + '">' + escapeHtml(label) + '</span>';
   }
 
   function renderTable() {
@@ -404,7 +469,7 @@
     if (list.length === 0) {
       var tr = document.createElement('tr');
       var td = document.createElement('td');
-      td.colSpan = 5;
+      td.colSpan = 7;
       td.className = 'empty-state';
       if (sortedSessions.length === 0) {
         td.innerHTML = 'No sessions saved yet. <a href="bac-calculator.html">Start a session</a> on the BAC Calculator page.';
@@ -423,32 +488,50 @@
       return;
     }
 
+    var rowSelectedId = selectedSessionId && list.some(function (item) {
+      return item.session_id === selectedSessionId;
+    }) ? selectedSessionId : (list[0].session_id || '');
+
     list.forEach(function (s, idx) {
       var globalIdx = sortedSessions.indexOf(s);
       var tr = document.createElement('tr');
       tr.dataset.index = String(globalIdx);
-      if (idx === 0) tr.className = 'selected';
+      var isSelected = s.session_id === rowSelectedId;
+      if (isSelected) tr.className = 'selected';
 
       var inp = s.inputs || {};
+      var events = Array.isArray(s.events) ? s.events : [];
+      var drinkEvents = events.filter(function (e) { return e && e.event_type === 'drink'; });
+      var drinkCount = drinkEvents.length;
+      var totalStd = drinkEvents.reduce(function (sum, e) { return sum + (Number(e.standard_drinks) || 0); }, 0);
+      var snap = s.prediction_snapshot || null;
+      var range = snap ? (Number(snap.bac_low).toFixed(3) + ' - ' + Number(snap.bac_high).toFixed(3)) : 'No prediction yet';
       tr.innerHTML =
         '<td><div class="td-session">' +
           '<div class="td-icon" style="background: rgba(200,240,77,0.1);">🍺</div>' +
-          '<div><div class="td-name">' + escapeHtml(shortId(s.session_id)) + '</div>' +
+          '<div><div class="td-name">' + escapeHtml(s.title || shortId(s.session_id)) + '</div>' +
           '<div class="td-date mono">' + escapeHtml(s.session_id || '') + '</div></div></div></td>' +
         '<td>' + escapeHtml(formatWhen(s.started_at)) + '</td>' +
         '<td><span class="' + statusBadgeClass(s.status) + '">' + escapeHtml(s.status || '—') + '</span></td>' +
-        '<td>' + escapeHtml(String(inp.drinks != null ? inp.drinks : '—')) + '</td>' +
-        '<td>' + escapeHtml(String(inp.hours_elapsed != null ? inp.hours_elapsed : '—')) + '</td>';
+        '<td>' + escapeHtml(String(drinkCount)) + '</td>' +
+        '<td>' + escapeHtml(totalStd.toFixed(2)) + '</td>' +
+        '<td>' + escapeHtml(range) + '</td>' +
+        '<td>' + reviewStatusHtml(s) + '</td>';
 
       tr.addEventListener('click', function () {
         document.querySelectorAll('#sessionsTable tr').forEach(function (r) { r.classList.remove('selected'); });
         tr.classList.add('selected');
+        selectedSessionId = s.session_id || '';
         showDetail(s);
       });
       tbody.appendChild(tr);
     });
 
-    if (list.length > 0) showDetail(list[0]);
+    var target = list.find(function (s) { return s.session_id === rowSelectedId; }) || list[0];
+    if (target) {
+      selectedSessionId = target.session_id || '';
+      showDetail(target);
+    }
   }
 
   function escapeHtml(str) {
@@ -473,7 +556,10 @@
     var rows = [
       ['Full session ID', s.session_id || '—'],
       ['Schema version', String(s.schema_version != null ? s.schema_version : '—')],
-      ['Drinks', String(inp.drinks != null ? inp.drinks : '—')],
+      ['Title', s.title || '—'],
+      ['Drink events', String((Array.isArray(s.events) ? s.events.filter(function (e) { return e && e.event_type === 'drink'; }).length : 0))],
+      ['Symptom events', String((Array.isArray(s.events) ? s.events.filter(function (e) { return e && e.event_type === 'symptom'; }).length : 0))],
+      ['Total standard drinks', String((Array.isArray(s.events) ? s.events.filter(function (e) { return e && e.event_type === 'drink'; }).reduce(function (sum, e) { return sum + (Number(e.standard_drinks) || 0); }, 0).toFixed(2) : '0.00'))],
       ['Drink type', inp.drink_type || '—'],
       ['Hours elapsed', String(inp.hours_elapsed != null ? inp.hours_elapsed : '—')],
       ['Food intake', inp.food_intake || '—'],
@@ -483,22 +569,109 @@
       ['Perceived intoxication', fb.perceived_intoxication != null ? String(fb.perceived_intoxication) : '—'],
       ['Hangover severity', fb.hangover_severity != null ? String(fb.hangover_severity) : '—'],
       ['Blackout', fb.blackout != null ? String(fb.blackout) : '—'],
-      ['Vomiting', fb.vomiting != null ? String(fb.vomiting) : '—']
+      ['Vomiting', fb.vomiting != null ? String(fb.vomiting) : '—'],
+      ['Latest BAC estimate', s.prediction_snapshot ? Number(s.prediction_snapshot.bac_estimate).toFixed(3) : 'No prediction yet'],
+      ['Latest BAC range', s.prediction_snapshot ? (Number(s.prediction_snapshot.bac_low).toFixed(3) + ' - ' + Number(s.prediction_snapshot.bac_high).toFixed(3)) : 'No prediction yet'],
+      ['Post-session review', reviewStatusLabel(s)]
     ];
     body.innerHTML = rows.map(function (pair) {
       return '<div class="detail-row"><span class="detail-key">' + escapeHtml(pair[0]) + '</span>' +
         '<span class="detail-value">' + escapeHtml(pair[1]) + '</span></div>';
     }).join('') +
-      '<div class="model-update"><strong>Note:</strong> Feedback fields are reserved for post-session capture; estimator not wired yet.</div>';
+      renderReviewSection(s);
+
+    var form = document.getElementById('postSessionReviewForm');
+    if (form) form.addEventListener('submit', handleReviewSubmit);
+  }
+
+  function optionRange(maxValue) {
+    var out = '';
+    for (var i = 0; i <= maxValue; i++) out += '<option value="' + i + '">' + i + '</option>';
+    return out;
+  }
+
+  function renderReviewSection(s) {
+    if (isReviewPending(s)) {
+      return '' +
+        '<div class="review-panel">' +
+          '<div class="review-title">Post-session review</div>' +
+          '<p class="review-copy">Subjective feedback is stored for future calibration context only. It does not update estimated BAC, r, or beta.</p>' +
+          '<form class="review-form" id="postSessionReviewForm" data-session-id="' + escapeHtml(s.session_id || '') + '">' +
+            '<div class="review-grid">' +
+              '<div class="review-field"><label for="reviewHangover">Hangover severity, 0-5</label><select id="reviewHangover" name="hangover_severity">' + optionRange(5) + '</select></div>' +
+              '<div class="review-field"><label for="reviewPeak">Perceived peak intoxication, 0-5</label><select id="reviewPeak" name="perceived_peak_intoxication">' + optionRange(5) + '</select></div>' +
+              '<div class="review-field"><label for="reviewVomited">Vomited?</label><select id="reviewVomited" name="vomited"><option value="false">No</option><option value="true">Yes</option></select></div>' +
+              '<div class="review-field"><label for="reviewBlackout">Blackout?</label><select id="reviewBlackout" name="blackout"><option value="false">No</option><option value="true">Yes</option></select></div>' +
+              '<div class="review-field"><label for="reviewMemoryGap">Memory gaps?</label><select id="reviewMemoryGap" name="memory_gap"><option value="false">No</option><option value="true">Yes</option></select></div>' +
+              '<div class="review-field"><label for="reviewHydration">Hydration after</label><select id="reviewHydration" name="hydration_after"><option value="unknown">Unknown</option><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></div>' +
+              '<div class="review-field"><label for="reviewFeltSober">When did you feel sober?</label><input id="reviewFeltSober" name="felt_sober_time" type="text" placeholder="Optional time or note"></div>' +
+              '<div class="review-field"><label for="reviewSleep">Sleep hours after session</label><input id="reviewSleep" name="sleep_hours_after" type="number" min="0" max="24" step="0.25" placeholder="Optional"></div>' +
+              '<div class="review-field full"><label for="reviewNotes">Notes</label><textarea id="reviewNotes" name="notes" placeholder="Optional context"></textarea></div>' +
+            '</div>' +
+            '<div class="review-actions"><button type="submit" class="btn-sm btn-sm-accent">Save Review</button></div>' +
+          '</form>' +
+        '</div>';
+    }
+
+    if (s.post_session_review) {
+      var r = s.post_session_review;
+      var saved = lastReviewSavedSessionId === s.session_id
+        ? '<div class="review-confirmation">Review saved. Predictions were not changed.</div>'
+        : '';
+      return saved +
+        '<div class="review-panel">' +
+          '<div class="review-title">Post-session review completed</div>' +
+          '<p class="review-copy">Saved ' + escapeHtml(formatWhen(r.submitted_at)) + '. This feedback is subjective context and is not treated as a BAC measurement.</p>' +
+          '<div class="detail-row"><span class="detail-key">Hangover severity</span><span class="detail-value">' + escapeHtml(r.hangover_severity) + '</span></div>' +
+          '<div class="detail-row"><span class="detail-key">Perceived peak intoxication</span><span class="detail-value">' + escapeHtml(r.perceived_peak_intoxication) + '</span></div>' +
+          '<div class="detail-row"><span class="detail-key">Vomited / blackout / memory gaps</span><span class="detail-value">' + escapeHtml([r.vomited ? 'vomited' : null, r.blackout ? 'blackout' : null, r.memory_gap ? 'memory gaps' : null].filter(Boolean).join(', ') || 'No') + '</span></div>' +
+          '<div class="detail-row"><span class="detail-key">Hydration after</span><span class="detail-value">' + escapeHtml(r.hydration_after || 'unknown') + '</span></div>' +
+          '<div class="detail-row"><span class="detail-key">Sleep hours after</span><span class="detail-value">' + escapeHtml(r.sleep_hours_after == null ? '—' : r.sleep_hours_after) + '</span></div>' +
+          '<div class="detail-row"><span class="detail-key">Felt sober time</span><span class="detail-value">' + escapeHtml(r.felt_sober_time || '—') + '</span></div>' +
+          '<div class="detail-row"><span class="detail-key">Notes</span><span class="detail-value">' + escapeHtml(r.notes || '—') + '</span></div>' +
+        '</div>';
+    }
+
+    return '<div class="model-update"><strong>Note:</strong> Post-session review is available after a session is completed. Reviews do not change the estimator yet.</div>';
+  }
+
+  function handleReviewSubmit(event) {
+    event.preventDefault();
+    var form = event.currentTarget;
+    var sessionId = form.dataset.sessionId;
+    var sleepRaw = form.elements.sleep_hours_after.value;
+    var review = {
+      submitted_at: new Date().toISOString(),
+      hangover_severity: Number(form.elements.hangover_severity.value),
+      perceived_peak_intoxication: Number(form.elements.perceived_peak_intoxication.value),
+      vomited: form.elements.vomited.value === 'true',
+      blackout: form.elements.blackout.value === 'true',
+      memory_gap: form.elements.memory_gap.value === 'true',
+      felt_sober_time: form.elements.felt_sober_time.value.trim(),
+      sleep_hours_after: sleepRaw === '' ? null : Number(sleepRaw),
+      hydration_after: form.elements.hydration_after.value,
+      notes: form.elements.notes.value.trim()
+    };
+    var updated = S.savePostSessionReview(sessionId, review);
+    if (!updated) return;
+    selectedSessionId = updated.session_id;
+    lastReviewSavedSessionId = updated.session_id;
+    loadSorted();
+    updateSummary();
+    renderTable();
   }
 
   function updateSummary() {
     var all = S.getSessions();
     var completed = all.filter(function (x) { return x.status === 'completed'; }).length;
     var drafts = all.filter(function (x) { return x.status === 'draft'; }).length;
+    var pendingReviews = typeof S.getSessionsPendingReview === 'function'
+      ? S.getSessionsPendingReview().length
+      : all.filter(isReviewPending).length;
     document.getElementById('sumTotal').textContent = String(all.length);
     document.getElementById('sumCompleted').textContent = String(completed);
     document.getElementById('sumDrafts').textContent = String(drafts);
+    document.getElementById('sumPendingReviews').textContent = String(pendingReviews);
   }
 
   document.getElementById('sessionSearch').addEventListener('input', function () {

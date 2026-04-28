@@ -378,6 +378,9 @@
   .session-meta { flex: 1; }
   .session-name { font-size: 0.85rem; font-weight: 500; color: var(--text); }
   .session-date { font-size: 0.73rem; color: var(--muted); margin-top: 0.1rem; }
+  .session-review-note { font-size: 0.72rem; margin-top: 0.2rem; }
+  .session-review-note a { color: var(--orange); text-decoration: none; font-weight: 600; }
+  .session-review-note a:hover { text-decoration: underline; }
   .session-bac {
     font-family: 'Syne', sans-serif;
     font-weight: 700;
@@ -628,7 +631,7 @@
   <div class="topbar">
     <div class="page-heading">
       <h1>Welcome back, Irayna 👋</h1>
-      <p>Monday, February 23, 2026 · Your model has 5 sessions of personal data</p>
+      <p>Monday, February 23, 2026 · Demo summary cards below are static until fully wired to prediction snapshots.</p>
     </div>
     <div class="topbar-actions">
       <button class="btn-sm btn-sm-ghost">Export CSV</button>
@@ -792,18 +795,18 @@
       </div>
     </div>
 
-    <!-- Drink suggestion -->
+    <!-- Threshold reference -->
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">Tonight's Suggestion</div>
-          <div class="card-sub">Based on your current profile</div>
+          <div class="card-title">Threshold Reference</div>
+          <div class="card-sub">Static demo estimate, not a drinking recommendation</div>
         </div>
-        <span class="pill pill-green">Safe</span>
+        <span class="pill pill-green">Conservative estimate</span>
       </div>
       <div style="text-align: center; padding: 1.5rem 0 1rem;">
         <div style="font-family: 'Syne', sans-serif; font-weight: 800; font-size: 3.5rem; color: var(--accent); letter-spacing: -3px; line-height: 1;">3–4</div>
-        <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem;">standard drinks to stay under 0.08%</div>
+        <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem;">estimated standard drinks, relative to the common 0.08 BAC driving threshold</div>
         <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.75rem; padding: 0.6rem; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid var(--border);">
           Based on: r̂=0.61, β̂=0.0153, <br>tonight's body weight + session context
         </div>
@@ -886,6 +889,13 @@
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    function isReviewPending(s) {
+      if (typeof SaferSessionStorage !== 'undefined' && typeof SaferSessionStorage.isReviewPending === 'function') {
+        return SaferSessionStorage.isReviewPending(s);
+      }
+      return s && s.status === 'completed' && s.review_status !== 'completed' && !s.post_session_review;
+    }
+
     if (top.length === 0) {
       header.hidden = true;
       body.innerHTML =
@@ -900,14 +910,25 @@
     header.hidden = false;
     var n = top.length;
     body.innerHTML = top.map(function (s, i) {
-      var label = 'Session ' + (i + 1);
+      var label = s && s.title ? s.title : ('Session ' + (i + 1));
       var st = (s && s.status) ? esc(s.status) : '—';
+      var events = Array.isArray(s.events) ? s.events : [];
+      var drinkEvents = events.filter(function (e) { return e && e.event_type === 'drink'; });
+      var snap = s && s.prediction_snapshot ? s.prediction_snapshot : null;
+      var pendingReview = isReviewPending(s);
+      var extra = snap
+        ? ('Estimated BAC ' + Number(snap.bac_low).toFixed(3) + '-' + Number(snap.bac_high).toFixed(3))
+        : ('Drink events: ' + drinkEvents.length);
+      var reviewLink = pendingReview
+        ? '<div class="session-review-note"><a href="history.html">Review pending</a></div>'
+        : '';
       return (
         '<div class="session-item">' +
           '<div class="session-icon" style="background: rgba(200,240,77,0.1);">🍺</div>' +
           '<div class="session-meta">' +
-            '<div class="session-name">' + label + '</div>' +
-            '<div class="session-date">' + formatWhen(s.started_at) + '</div>' +
+            '<div class="session-name">' + esc(label) + '</div>' +
+            '<div class="session-date">' + formatWhen(s.started_at) + ' · ' + esc(extra) + '</div>' +
+            reviewLink +
           '</div>' +
           '<span class="session-status-pill">' + st + '</span>' +
         '</div>'
