@@ -4,14 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BAC Calculator — Safer</title>
-
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Safer">
 <meta name="theme-color" content="#060910">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
-
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -20,43 +18,22 @@
     --surface: rgba(255,255,255,0.04);
     --surface-hover: rgba(255,255,255,0.07);
     --border: rgba(255,255,255,0.08);
-    --border-bright: rgba(255,255,255,0.15);
     --accent: #C8F04D;
     --accent-dim: rgba(200,240,77,0.12);
     --accent-glow: rgba(200,240,77,0.3);
     --red: #FF6B6B;
     --orange: #FFB347;
-    --blue: #5B8DEF;
     --text: #F0F4FF;
     --muted: #6B7A99;
     --muted-mid: #8A96B0;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 300;
-    min-height: 100vh;
-    display: flex;
-  }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; min-height: 100vh; display: flex; }
 
-  .sidebar {
-    width: 240px;
-    min-height: 100vh;
-    background: var(--sidebar);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    padding: 1.75rem 1.25rem;
-    position: fixed;
-    top: 0; left: 0; bottom: 0;
-    z-index: 50;
-  }
+  .sidebar { width: 240px; min-height: 100vh; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.75rem 1.25rem; position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; }
   .sidebar-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2.5rem; padding: 0 0.5rem; }
   .sidebar-logo .dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); animation: pulse 2s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+  @keyframes pulse { 0%,100%{opacity:1;}50%{opacity:0.5;} }
   .sidebar-section { font-size: 0.65rem; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 500; padding: 0 0.5rem; margin-bottom: 0.6rem; margin-top: 1.5rem; }
   .sidebar-section:first-of-type { margin-top: 0; }
   .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 10px; cursor: pointer; text-decoration: none; font-size: 0.88rem; color: var(--muted-mid); transition: background 0.15s, color 0.15s; margin-bottom: 0.2rem; }
@@ -71,149 +48,74 @@
   .user-email { font-size: 0.72rem; color: var(--muted); }
 
   .main { margin-left: 240px; flex: 1; padding: 2rem 2.5rem; }
-
-  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5rem; }
   .page-heading h1 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: -0.5px; }
-  .page-heading p { font-size: 0.83rem; color: var(--muted); margin-top: 0.25rem; max-width: 520px; line-height: 1.5; }
+  .page-heading p { font-size: 0.83rem; color: var(--muted); margin-top: 0.2rem; }
 
-  .start-card {
-    max-width: 480px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 2.5rem;
-    text-align: center;
-  }
-  .start-card::before {
-    content: '';
-    display: block;
-    height: 1px;
-    margin: -0.5rem -2.5rem 1.5rem;
-    background: linear-gradient(90deg, transparent, rgba(200,240,77,0.35), transparent);
-  }
-  .start-card p { color: var(--muted-mid); font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.75rem; }
+  .calc-grid { display: grid; grid-template-columns: 420px 1fr; gap: 2rem; align-items: start; }
 
-  .btn-primary {
-    background: var(--accent);
-    color: #0F1A00;
-    border: none;
-    border-radius: 14px;
-    padding: 0.95rem 2rem;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: box-shadow 0.25s, transform 0.2s;
-  }
-  .btn-primary:hover { box-shadow: 0 0 28px var(--accent-glow); transform: translateY(-1px); }
-
-  .btn-secondary {
-    background: transparent;
-    color: var(--muted-mid);
-    border: 1px solid var(--border-bright);
-    border-radius: 12px;
-    padding: 0.75rem 1.25rem;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.88rem;
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s, background 0.2s;
-  }
-  .btn-secondary:hover { color: var(--text); border-color: rgba(255,255,255,0.25); background: var(--surface-hover); }
-
-  .calc-grid { display: grid; grid-template-columns: minmax(0, 440px) 1fr; gap: 2rem; align-items: start; }
-
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    overflow: hidden;
-  }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; }
   .panel-section { padding: 1.75rem; border-bottom: 1px solid var(--border); }
   .panel-section:last-child { border-bottom: none; }
-  .panel-title {
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 0.88rem;
-    color: var(--muted-mid);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin-bottom: 1.25rem;
-  }
+  .panel-title { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.88rem; color: var(--muted-mid); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
 
-  .field { margin-bottom: 1.1rem; }
-  .field:last-child { margin-bottom: 0; }
-  .field label {
-    display: block;
-    font-size: 0.73rem;
-    color: var(--muted);
-    margin-bottom: 0.45rem;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-    font-weight: 500;
-  }
-  .field input, .field select {
-    width: 100%;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 0.75rem 1rem;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.9rem;
-    outline: none;
-    transition: border-color 0.2s, background 0.2s;
-  }
-  .field input:focus, .field select:focus {
-    border-color: var(--accent);
-    background: rgba(200,240,77,0.04);
-  }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .field label { display: block; font-size: 0.73rem; color: var(--muted); margin-bottom: 0.45rem; letter-spacing: 0.3px; text-transform: uppercase; font-weight: 500; }
+  .field input, .field select { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s, background 0.2s; -webkit-appearance: none; }
+  .field input:focus, .field select:focus { border-color: var(--accent); background: rgba(200,240,77,0.04); }
   .field select option { background: #1a2233; }
-  .field.has-error input, .field.has-error select { border-color: rgba(255,107,107,0.45); }
-  .field-error { font-size: 0.76rem; color: var(--red); margin-top: 0.35rem; display: none; }
-  .field-error.visible { display: block; }
+  .field input::placeholder { color: var(--muted); }
 
-  .form-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; background: var(--border); border-radius: 100px; outline: none; cursor: pointer; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); cursor: pointer; transition: transform 0.1s; }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
-  .side-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 1.75rem;
-  }
-  .side-card h2 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  .side-meta { font-size: 0.82rem; color: var(--muted-mid); line-height: 1.6; }
-  .side-meta code { font-size: 0.78rem; color: var(--accent); background: rgba(200,240,77,0.08); padding: 0.15rem 0.4rem; border-radius: 6px; }
+  .toggle-group { display: flex; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .toggle-group button { flex: 1; background: none; border: none; color: var(--muted); padding: 0.7rem; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; transition: background 0.15s, color 0.15s; }
+  .toggle-group button.active { background: var(--accent-dim); color: var(--accent); }
 
-  .toast {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    background: var(--sidebar);
-    border: 1px solid rgba(200,240,77,0.35);
-    color: var(--text);
-    padding: 0.85rem 1.25rem;
-    border-radius: 12px;
-    font-size: 0.88rem;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.35s ease;
-    z-index: 200;
-  }
-  .toast.visible { opacity: 1; pointer-events: auto; }
+  .level-group { display: flex; gap: 0.5rem; }
+  .level-btn { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; color: var(--muted-mid); padding: 0.6rem; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; text-align: center; transition: all 0.15s; }
+  .level-btn.active { background: var(--accent-dim); border-color: rgba(200,240,77,0.3); color: var(--accent); }
 
-  @media (max-width: 900px) {
-    .calc-grid { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 800px) {
-    .sidebar { width: 64px; padding: 1rem 0.75rem; }
-    .sidebar-logo span:last-child,
-    .sidebar-section, .user-pill .user-info,
-    .nav-item span:last-child { display: none; }
-    .nav-item { justify-content: center; padding: 0.65rem; }
-    .user-pill { justify-content: center; }
-    .main { margin-left: 64px; padding: 1.5rem; }
-  }
+  .submit-btn { width: 100%; background: var(--accent); color: #0F1A00; border: none; border-radius: 14px; padding: 1rem; font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; transition: box-shadow 0.25s, transform 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+  .submit-btn:hover { box-shadow: 0 0 30px var(--accent-glow); transform: translateY(-1px); }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .results { display: flex; flex-direction: column; gap: 1.5rem; }
+  .result-hero { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 2rem; text-align: center; position: relative; overflow: hidden; }
+  .result-hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--accent-glow), transparent); }
+  .result-bac-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+  .result-bac-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 5rem; letter-spacing: -4px; line-height: 1; transition: color 0.4s; }
+  .result-bac-unit { font-size: 1rem; font-weight: 400; color: var(--muted); }
+  .result-status { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 1rem; border-radius: 100px; padding: 0.35rem 1rem; font-size: 0.8rem; font-weight: 500; }
+  .result-status .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .status-safe { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(200,240,77,0.25); }
+  .status-warn { background: rgba(255,179,71,0.12); color: var(--orange); border: 1px solid rgba(255,179,71,0.25); }
+  .status-danger { background: rgba(255,107,107,0.12); color: var(--red); border: 1px solid rgba(255,107,107,0.25); }
+  .result-detail-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+  .result-detail-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.1rem; }
+  .result-detail-label { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; }
+  .r-val-badge { font-size: 0.72rem; color: var(--muted); margin-top: 0.75rem; }
+  .r-val-badge span { color: var(--accent); font-family: 'Syne', sans-serif; font-weight: 700; }
+
+  .graph-card { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 1.75rem; }
+  .graph-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .graph-title { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.95rem; }
+  .graph-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
+  .graph-area { height: 180px; }
+  .graph-area svg { width: 100%; height: 100%; }
+  .graph-x-labels { display: flex; justify-content: space-between; margin-top: 0.6rem; font-size: 0.7rem; color: var(--muted); }
+  .legend { display: flex; gap: 1.5rem; margin-top: 1rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--muted-mid); }
+  .legend-line { width: 20px; height: 2px; border-radius: 1px; }
+
+  .tip-card { background: var(--accent-dim); border: 1px solid rgba(200,240,77,0.2); border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; gap: 0.75rem; }
+  .tip-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 0.1rem; }
+  .tip-text { font-size: 0.83rem; color: var(--muted-mid); line-height: 1.55; }
+  .tip-text strong { color: var(--accent); }
+
+  .error-card { background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.2); border-radius: 16px; padding: 1rem 1.5rem; font-size: 0.83rem; color: var(--red); display: none; }
 </style>
 </head>
 <body>
@@ -225,7 +127,7 @@
   <a href="bac-calculator.html" class="nav-item active"><span class="nav-icon">⬡</span><span>BAC Calculator</span></a>
   <a href="history.html" class="nav-item"><span class="nav-icon">◷</span><span>History</span></a>
   <div class="sidebar-section">Account</div>
-  <a href="input.html" class="nav-item"><span class="nav-icon">◉</span><span>My Profile</span></a>
+  <a href="#" class="nav-item"><span class="nav-icon">◉</span><span>My Profile</span></a>
   <a href="#" class="nav-item"><span class="nav-icon">⚙</span><span>Settings</span></a>
   <div class="sidebar-bottom">
     <div class="user-pill">
@@ -239,265 +141,360 @@
   <div class="topbar">
     <div class="page-heading">
       <h1>BAC Calculator</h1>
-      <p>Log a drinking session for this device. Fields are saved locally and will feed future BAC estimates — no model run yet.</p>
+      <p>Personalized r̂ computed from your biological profile via regression model</p>
     </div>
   </div>
 
-  <div id="startSessionBlock">
-    <div class="start-card">
-      <p>No active session yet. Start one to record drinks, timing, and context for later personalization.</p>
-      <button type="button" class="btn-primary" id="btnStartSession">Start session</button>
+  <div class="calc-grid">
+    <div class="panel">
+
+      <div class="panel-section">
+        <div class="panel-title">🧬 Biological Profile</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Sex assigned at birth</label>
+            <div class="toggle-group" id="sexGroup">
+              <button class="active" data-val="m">Male</button>
+              <button data-val="f">Female</button>
+              <button data-val="n">Neutral</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Weight (lbs)</label>
+            <input type="number" value="150" id="weightInput" min="80" max="350" oninput="computeBAC()">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Age</label>
+            <input type="number" value="20" id="ageInput" min="18" max="80" oninput="computeBAC()">
+          </div>
+          <div class="field">
+            <label>Height (in)</label>
+            <input type="number" value="69" id="heightInput" min="48" max="96" oninput="computeBAC()">
+          </div>
+        </div>
+        <div class="field">
+          <label>Body fat level</label>
+          <div class="level-group" id="fatGroup">
+            <button class="level-btn" onclick="setLevel(this,'fatGroup')">🏃 Low</button>
+            <button class="level-btn active" onclick="setLevel(this,'fatGroup')">⚖️ Mid</button>
+            <button class="level-btn" onclick="setLevel(this,'fatGroup')">📈 High</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">🌙 Pre-Session Context</div>
+        <div class="field" style="margin-bottom:1rem;">
+          <label>Hours of sleep last night — <span id="sleepVal" style="color:var(--accent);font-weight:600;">7 hrs</span></label>
+          <input type="range" min="0" max="12" step="0.5" value="7" id="sleepSlider"
+            oninput="document.getElementById('sleepVal').textContent=this.value+' hrs'; computeBAC();">
+        </div>
+        <div class="field" style="margin-bottom:1rem;">
+          <label>Hydration level</label>
+          <div class="level-group" id="hydGroup">
+            <button class="level-btn" onclick="setLevel(this,'hydGroup')">🥵 Dehydrated</button>
+            <button class="level-btn active" onclick="setLevel(this,'hydGroup')">💧 Normal</button>
+            <button class="level-btn" onclick="setLevel(this,'hydGroup')">🌊 Well hydrated</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Last meal</label>
+          <div class="level-group" id="foodGroup">
+            <button class="level-btn" onclick="setLevel(this,'foodGroup')">🚫 Empty</button>
+            <button class="level-btn active" onclick="setLevel(this,'foodGroup')">🥗 Light</button>
+            <button class="level-btn" onclick="setLevel(this,'foodGroup')">🍔 Full meal</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">🍺 Drinking Session</div>
+        <div class="field" style="margin-bottom:1rem;">
+          <label>Number of standard drinks — <span id="drinksVal" style="color:var(--accent);font-weight:600;">3 drinks</span></label>
+          <input type="range" min="0" max="12" step="1" value="3" id="drinksSlider"
+            oninput="document.getElementById('drinksVal').textContent=this.value+' drinks'; computeBAC();">
+        </div>
+        <div class="field" style="margin-bottom:1rem;">
+          <label>Hours drinking — <span id="hoursVal" style="color:var(--accent);font-weight:600;">2.0 hrs</span></label>
+          <input type="range" min="0.5" max="8" step="0.5" value="2" id="hoursSlider"
+            oninput="document.getElementById('hoursVal').textContent=this.value+' hrs'; computeBAC();">
+        </div>
+        <div class="field">
+          <label>Alcohol type (ABV approx.)</label>
+          <select onchange="computeBAC()">
+            <option value="14">🍺 Beer (14g / standard drink)</option>
+            <option value="14">🍷 Wine (14g / standard drink)</option>
+            <option value="14">🥃 Spirits (14g / standard drink)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-section" style="border-bottom:none;">
+        <button class="submit-btn" id="calcBtn" onclick="computeBAC()">
+          Calculate My BAC
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="error-card" id="errorCard" style="margin-top:1rem;">
+          ⚠️ Could not reach the BAC model API. Make sure your server is running.
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div id="sessionWorkspace" hidden>
-    <div class="calc-grid">
-      <form id="sessionForm" class="panel" novalidate>
-        <div class="panel-section">
-          <div class="panel-title">🍺 Session inputs</div>
-
-          <div class="field" data-field="drinks">
-            <label for="inp_drinks">Standard drinks</label>
-            <input type="number" id="inp_drinks" name="drinks" min="0" step="1" inputmode="numeric" required placeholder="0">
-            <div class="field-error" data-err="drinks"></div>
+    <div class="results">
+      <div class="result-hero">
+        <div class="result-bac-label">Estimated Current BAC</div>
+        <div class="result-bac-val" id="bacDisplay" style="color:var(--accent);">—</div>
+        <div class="result-bac-unit">%</div>
+        <div>
+          <span class="result-status status-safe" id="bacStatus">
+            <span class="status-dot" style="background:var(--accent);"></span>
+            Enter your info and calculate
+          </span>
+        </div>
+        <div class="r-val-badge">Personalized r̂ = <span id="rDisplay">—</span></div>
+        <div class="result-detail-row">
+          <div class="result-detail">
+            <div class="result-detail-val" id="peakBac">—</div>
+            <div class="result-detail-label">Predicted peak BAC</div>
           </div>
-
-          <div class="field" data-field="drink_type">
-            <label for="inp_drink_type">Drink type</label>
-            <select id="inp_drink_type" name="drink_type" required>
-              <option value="standard">Standard drink (14g ethanol)</option>
-            </select>
-            <div class="field-error" data-err="drink_type"></div>
+          <div class="result-detail">
+            <div class="result-detail-val" id="soberTime">—</div>
+            <div class="result-detail-label">Est. time to sober</div>
           </div>
-
-          <div class="field" data-field="hours_elapsed">
-            <label for="inp_hours_elapsed">Hours elapsed (session)</label>
-            <input type="number" id="inp_hours_elapsed" name="hours_elapsed" min="0" step="0.1" inputmode="decimal" required placeholder="0">
-            <div class="field-error" data-err="hours_elapsed"></div>
-          </div>
-
-          <div class="field" data-field="food_intake">
-            <label for="inp_food_intake">Food intake</label>
-            <select id="inp_food_intake" name="food_intake" required>
-              <option value="unknown">Unknown</option>
-              <option value="fasted">Fasted</option>
-              <option value="light_meal">Light meal</option>
-              <option value="full_meal">Full meal</option>
-            </select>
-            <div class="field-error" data-err="food_intake"></div>
-          </div>
-
-          <div class="field" data-field="hydration">
-            <label for="inp_hydration">Hydration</label>
-            <select id="inp_hydration" name="hydration" required>
-              <option value="unknown">Unknown</option>
-              <option value="low">Low</option>
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-            </select>
-            <div class="field-error" data-err="hydration"></div>
-          </div>
-
-          <div class="field" data-field="sleep">
-            <label for="inp_sleep">Sleep (recent)</label>
-            <select id="inp_sleep" name="sleep" required>
-              <option value="unknown">Unknown</option>
-              <option value="poor">Poor</option>
-              <option value="normal">Normal</option>
-              <option value="good">Good</option>
-            </select>
-            <div class="field-error" data-err="sleep"></div>
-          </div>
-
-          <div class="field" data-field="fasting">
-            <label for="inp_fasting">Fasting</label>
-            <select id="inp_fasting" name="fasting" required>
-              <option value="unknown">Unknown</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-            <div class="field-error" data-err="fasting"></div>
+          <div class="result-detail">
+            <div class="result-detail-val" id="safeAdd">—</div>
+            <div class="result-detail-label">Safe to add</div>
           </div>
         </div>
+      </div>
 
-        <div class="panel-section">
-          <div class="form-actions">
-            <button type="submit" class="btn-primary" id="btnSaveSession">Save session</button>
-            <button type="button" class="btn-secondary" id="btnEndSession">End session</button>
+      <div class="graph-card">
+        <div class="graph-header">
+          <div>
+            <div class="graph-title">BAC Curve Over Time</div>
+            <div class="graph-sub">Current trajectory based on your inputs</div>
           </div>
+          <span style="font-size:0.72rem;color:var(--muted);" id="graphRLabel">r̂ = —</span>
         </div>
-      </form>
+        <div class="graph-area">
+          <svg viewBox="0 0 520 180" preserveAspectRatio="none" id="bacSvg">
+            <defs>
+              <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#C8F04D" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#C8F04D" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="36" x2="520" y2="36" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="72" x2="520" y2="72" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="108" x2="520" y2="108" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="144" x2="520" y2="144" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="72" x2="520" y2="72" stroke="rgba(255,107,107,0.35)" stroke-width="1" stroke-dasharray="5,4"/>
+            <text x="8" y="68" font-size="9" fill="rgba(255,107,107,0.65)" font-family="DM Sans">0.08%</text>
+            <path id="curveArea" d="M0 180 L520 180 Z" fill="url(#curveGrad)"/>
+            <path id="curveLine" d="M0 180 L520 180" fill="none" stroke="#C8F04D" stroke-width="2.5" stroke-linecap="round"/>
+            <circle id="currentDot" cx="0" cy="180" r="5" fill="#C8F04D" filter="drop-shadow(0 0 6px #C8F04D)" visibility="hidden"/>
+            <circle id="currentDotRing" cx="0" cy="180" r="10" fill="rgba(200,240,77,0.2)" visibility="hidden"/>
+          </svg>
+        </div>
+        <div class="graph-x-labels">
+          <span>0h</span><span>1h</span><span>2h</span><span>3h</span><span>4h</span><span>5h</span><span>6h</span>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-line" style="background:var(--accent);"></div> Your BAC</div>
+          <div class="legend-item"><div class="legend-line" style="background:var(--red);height:1px;border-top:1px dashed var(--red);"></div> Legal limit (0.08%)</div>
+        </div>
+      </div>
 
-      <div class="side-card">
-        <h2>Current session</h2>
-        <p class="side-meta" id="sideSessionMeta">—</p>
-        <p class="side-meta" style="margin-top: 1rem; font-size: 0.78rem; color: var(--muted);">
-          BAC curve and numeric estimates will appear here once the estimator is wired to <code>safer_sessions</code> and your profile.
+      <div class="tip-card">
+        <span class="tip-icon">💡</span>
+        <p class="tip-text" id="tipText">
+          <strong>Calculate your BAC</strong> to see personalized recommendations based on your biological profile.
         </p>
       </div>
     </div>
   </div>
 </main>
 
-<div class="toast" id="saveToast" role="status" aria-live="polite">Session saved locally</div>
-
-<script src="session-storage.js"></script>
 <script>
-(function () {
-  var S = window.SaferSessionStorage;
+  // ── Replace with your deployed API URL once hosted ──
+  const API_URL = 'http://localhost:8000/r-coefficient';
 
-  function $(id) { return document.getElementById(id); }
-
-  function clearErrors() {
-    document.querySelectorAll('.field-error').forEach(function (el) {
-      el.textContent = '';
-      el.classList.remove('visible');
+  // Sex toggle
+  document.querySelectorAll('#sexGroup button').forEach(btn => {
+    btn.addEventListener('click', function() {
+      this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      computeBAC();
     });
-    document.querySelectorAll('.field.has-error').forEach(function (el) {
-      el.classList.remove('has-error');
-    });
-  }
-
-  function err(field, msg) {
-    var wrap = document.querySelector('[data-field="' + field + '"]');
-    if (!wrap) return;
-    wrap.classList.add('has-error');
-    var e = wrap.querySelector('.field-error');
-    if (e) {
-      e.textContent = msg;
-      e.classList.add('visible');
-    }
-  }
-
-  function validateForm() {
-    clearErrors();
-    var ok = true;
-    var drinksRaw = $('inp_drinks').value.trim();
-    var hoursRaw = $('inp_hours_elapsed').value.trim();
-
-    if (drinksRaw === '') {
-      err('drinks', 'Required.');
-      ok = false;
-    } else {
-      var d = Number(drinksRaw);
-      if (!Number.isFinite(d) || d < 0) {
-        err('drinks', 'Must be a finite number ≥ 0.');
-        ok = false;
-      }
-    }
-
-    if (hoursRaw === '') {
-      err('hours_elapsed', 'Required.');
-      ok = false;
-    } else {
-      var h = Number(hoursRaw);
-      if (!Number.isFinite(h) || h < 0) {
-        err('hours_elapsed', 'Must be a finite number ≥ 0.');
-        ok = false;
-      }
-    }
-
-    return ok;
-  }
-
-  function readFormIntoSession(session) {
-    session.inputs.drinks = Number($('inp_drinks').value);
-    session.inputs.drink_type = $('inp_drink_type').value;
-    session.inputs.hours_elapsed = Number($('inp_hours_elapsed').value);
-    session.inputs.food_intake = $('inp_food_intake').value;
-    session.inputs.hydration = $('inp_hydration').value;
-    session.inputs.sleep = $('inp_sleep').value;
-    session.inputs.fasting = $('inp_fasting').value;
-    session.updated_at = new Date().toISOString();
-    return session;
-  }
-
-  function applySessionToForm(session) {
-    var inp = session.inputs || {};
-    $('inp_drinks').value = inp.drinks != null ? String(inp.drinks) : '';
-    $('inp_drink_type').value = inp.drink_type || 'standard';
-    $('inp_hours_elapsed').value = inp.hours_elapsed != null ? String(inp.hours_elapsed) : '';
-    $('inp_food_intake').value = inp.food_intake || 'unknown';
-    $('inp_hydration').value = inp.hydration || 'unknown';
-    $('inp_sleep').value = inp.sleep || 'unknown';
-    $('inp_fasting').value = inp.fasting || 'unknown';
-    updateSideMeta(session);
-  }
-
-  function shortId(id) {
-    if (!id) return '—';
-    return id.length > 12 ? id.slice(0, 8) + '…' : id;
-  }
-
-  function updateSideMeta(session) {
-    var el = $('sideSessionMeta');
-    el.innerHTML =
-      '<strong style="color:var(--text);">ID</strong> <code>' + shortId(session.session_id) + '</code><br>' +
-      '<strong style="color:var(--text);">Status</strong> ' + session.status + '<br>' +
-      '<strong style="color:var(--text);">Started</strong> ' + (session.started_at || '—');
-  }
-
-  function showToast() {
-    var t = $('saveToast');
-    t.classList.add('visible');
-    clearTimeout(showToast._tm);
-    showToast._tm = setTimeout(function () { t.classList.remove('visible'); }, 2800);
-  }
-
-  function refreshLayout() {
-    var draft = S.getActiveDraftSession();
-    if (!draft) {
-      $('startSessionBlock').hidden = false;
-      $('sessionWorkspace').hidden = true;
-    } else {
-      $('startSessionBlock').hidden = true;
-      $('sessionWorkspace').hidden = false;
-      applySessionToForm(draft);
-    }
-  }
-
-  $('btnStartSession').addEventListener('click', function () {
-    S.createSession();
-    refreshLayout();
   });
 
-  $('sessionForm').addEventListener('submit', function (e) {
-    e.preventDefault();
-    if (!validateForm()) return;
-    var draft = S.getActiveDraftSession();
-    if (!draft) {
-      refreshLayout();
-      return;
-    }
-    readFormIntoSession(draft);
+  function setLevel(btn, groupId) {
+    document.getElementById(groupId).querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    computeBAC();
+  }
+
+  // ── Read inputs ──
+  function getGender() {
+    const active = document.querySelector('#sexGroup button.active');
+    return active ? active.dataset.val : 'm';
+  }
+
+  function getFat() {
+    const active = document.querySelector('#fatGroup .active');
+    if (!active) return 'high';
+    const t = active.textContent.trim();
+    if (t.includes('Low')) return 'low';
+    if (t.includes('Mid')) return 'mid';
+    return 'high';
+  }
+
+  // ── Main compute — async so we can await the API ──
+  let debounceTimer = null;
+  function computeBAC() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(doCompute, 350);
+  }
+
+  async function doCompute() {
+    const btn = document.getElementById('calcBtn');
+    btn.disabled = true;
+    btn.innerHTML = 'Calculating…';
+    document.getElementById('errorCard').style.display = 'none';
+
+    // Collect inputs
+    const drinks    = parseFloat(document.getElementById('drinksSlider').value);
+    const weightLbs = parseFloat(document.getElementById('weightInput').value) || 150;
+    const hours     = parseFloat(document.getElementById('hoursSlider').value);
+    const sleep     = parseFloat(document.getElementById('sleepSlider').value);
+    const age       = parseInt(document.getElementById('ageInput').value) || 20;
+    const heightIn  = parseFloat(document.getElementById('heightInput').value) || 69;
+    const gender    = getGender();
+    const fat       = getFat();
+
+    // Convert to units the API expects (kg, cm)
+    const weightKg  = weightLbs * 0.453592;
+    const heightCm  = heightIn  * 2.54;
+
+    // Modifiers for beta
+    const hydBtn   = document.querySelector('#hydGroup .active');
+    const hydMap   = { '🥵 Dehydrated': -0.002, '💧 Normal': 0, '🌊 Well hydrated': 0.002 };
+    const hydDelta = hydBtn ? (hydMap[hydBtn.textContent.trim()] || 0) : 0;
+
+    const foodBtn   = document.querySelector('#foodGroup .active');
+    const foodMap   = { '🚫 Empty': -0.002, '🥗 Light': 0, '🍔 Full meal': 0.003 };
+    const foodDelta = foodBtn ? (foodMap[foodBtn.textContent.trim()] || 0) : 0;
+
+    const sleepDelta = sleep < 6 ? -0.002 : sleep > 8 ? 0.001 : 0;
+    const beta       = 0.015 + hydDelta + foodDelta + sleepDelta;
+
+    // ── Call your Python API for personalised r ──
+    let r;
     try {
-      S.updateSession(draft);
-      showToast();
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ age, gender, weight: weightKg, height: heightCm, fat })
+      });
+      if (!res.ok) throw new Error('API error ' + res.status);
+      const data = await res.json();
+      r = data.r;
     } catch (err) {
-      window.alert('Could not save session.');
-    }
-  });
-
-  $('btnEndSession').addEventListener('click', function () {
-    var draft = S.getActiveDraftSession();
-    if (!draft) return;
-    if (!validateForm()) return;
-    readFormIntoSession(draft);
-    draft.status = 'completed';
-    draft.ended_at = new Date().toISOString();
-    draft.updated_at = draft.ended_at;
-    try {
-      S.updateSession(draft);
-      S.clearActiveDraftSessionId();
-    } catch (e2) {
-      window.alert('Could not end session.');
+      document.getElementById('errorCard').style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = 'Calculate My BAC <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       return;
     }
-    window.location.href = 'history.html';
-  });
 
-  refreshLayout();
-})();
+    // ── BAC formula ──
+    // A = grams of alcohol, W = body weight in grams
+    const A = drinks * 14;
+    const W = weightKg * 1000; // convert kg → g
+
+    const rawBAC  = Math.max(0, (A / (r * W)) * 100 - beta * hours);
+    const peakBAC = Math.max(0, (A / (r * W)) * 100 - beta * Math.max(0, hours - 0.5));
+
+    // ── Update UI ──
+    const bacEl = document.getElementById('bacDisplay');
+    bacEl.textContent = rawBAC.toFixed(3);
+    bacEl.style.color = rawBAC < 0.05 ? 'var(--accent)' : rawBAC < 0.08 ? 'var(--orange)' : 'var(--red)';
+
+    document.getElementById('rDisplay').textContent   = r.toFixed(3);
+    document.getElementById('graphRLabel').textContent = 'r̂ = ' + r.toFixed(3);
+
+    const statusEl = document.getElementById('bacStatus');
+    if (rawBAC < 0.05) {
+      statusEl.className = 'result-status status-safe';
+      statusEl.innerHTML = '<span class="status-dot" style="background:var(--accent);"></span> Below legal limit — drink responsibly';
+    } else if (rawBAC < 0.08) {
+      statusEl.className = 'result-status status-warn';
+      statusEl.innerHTML = '<span class="status-dot" style="background:var(--orange);"></span> Approaching legal limit — slow down';
+    } else {
+      statusEl.className = 'result-status status-danger';
+      statusEl.innerHTML = '<span class="status-dot" style="background:var(--red);"></span> Above legal limit — stop drinking';
+    }
+
+    document.getElementById('peakBac').textContent = peakBAC.toFixed(3);
+
+    const soberTime = rawBAC > 0 ? (rawBAC / beta).toFixed(1) + ' hrs' : '0 hrs';
+    document.getElementById('soberTime').textContent = soberTime;
+
+    const headroom    = 0.08 - rawBAC;
+    const drinksPerUnit = (14 / (r * W)) * 100;
+    const safeAdd     = Math.max(0, Math.floor(headroom / drinksPerUnit));
+    document.getElementById('safeAdd').textContent   = safeAdd > 0 ? '+' + safeAdd + ' more' : 'None';
+    document.getElementById('safeAdd').style.color   = safeAdd > 0 ? 'var(--accent)' : 'var(--red)';
+
+    document.getElementById('tipText').innerHTML = safeAdd > 0
+      ? `<strong>You're within a safe range.</strong> Based on your profile, you can have up to <strong>${safeAdd} more standard drink${safeAdd > 1 ? 's' : ''}</strong> while staying below 0.08%. BAC can lag ~30 mins behind consumption — pace yourself.`
+      : `<strong>Stop drinking.</strong> You've reached or exceeded the safe limit for your profile. Give it time — your estimated sober time is ${soberTime}.`;
+
+    updateGraph(rawBAC, beta, hours, r, W, A);
+
+    btn.disabled = false;
+    btn.innerHTML = 'Calculate My BAC <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function updateGraph(bac, beta, hours, r, W, A) {
+    const svgH = 180;
+    const maxBacDisplay = 0.2;
+
+    function bacToY(b) {
+      return svgH - 10 - Math.min(1, Math.max(0, b / maxBacDisplay)) * (svgH - 20);
+    }
+
+    const totalH = 6;
+    const steps  = 60;
+    let pathD = '', areaD = '';
+
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * totalH;
+      const b = Math.max(0, (A / (r * W)) * 100 - beta * t);
+      const x = (i / steps) * 520;
+      const y = bacToY(b);
+      if (i === 0) { pathD = `M${x} ${y}`; areaD = `M${x} ${y}`; }
+      else          { pathD += ` L${x} ${y}`; areaD += ` L${x} ${y}`; }
+    }
+    areaD += ` L520 ${svgH} L0 ${svgH} Z`;
+
+    document.getElementById('curveLine').setAttribute('d', pathD);
+    document.getElementById('curveArea').setAttribute('d', areaD);
+
+    const currentX = (hours / totalH) * 520;
+    const currentY = bacToY(bac);
+    const dot      = document.getElementById('currentDot');
+    const ring     = document.getElementById('currentDotRing');
+    dot.setAttribute('cx', currentX);   dot.setAttribute('cy', currentY);
+    ring.setAttribute('cx', currentX);  ring.setAttribute('cy', currentY);
+    dot.setAttribute('visibility', 'visible');
+    ring.setAttribute('visibility', 'visible');
+
+    const color = bac < 0.05 ? '#C8F04D' : bac < 0.08 ? '#FFB347' : '#FF6B6B';
+    document.getElementById('curveLine').setAttribute('stroke', color);
+    dot.setAttribute('fill', color);
+  }
 </script>
 </body>
 </html>
