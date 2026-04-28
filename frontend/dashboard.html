@@ -368,21 +368,76 @@
   .session-item:hover { padding-left: 4px; }
 
   .session-icon {
-    width: 36px; height: 36px;
+    min-width: 54px; height: 32px;
+    padding: 0 0.55rem;
     border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 1rem;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
     flex-shrink: 0;
   }
 
   .session-meta { flex: 1; }
   .session-name { font-size: 0.85rem; font-weight: 500; color: var(--text); }
   .session-date { font-size: 0.73rem; color: var(--muted); margin-top: 0.1rem; }
+  .session-review-note { font-size: 0.72rem; margin-top: 0.2rem; }
+  .session-review-note a { color: var(--orange); text-decoration: none; font-weight: 600; }
+  .session-review-note a:hover { text-decoration: underline; }
   .session-bac {
     font-family: 'Syne', sans-serif;
     font-weight: 700;
     font-size: 1rem;
     letter-spacing: -0.5px;
+  }
+
+  .session-status-pill {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: capitalize;
+    color: var(--muted-mid);
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+  }
+
+  .recent-sessions-empty {
+    padding: 2.25rem 1.5rem 2.5rem;
+    text-align: center;
+  }
+  .recent-sessions-empty h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+  .recent-sessions-empty p {
+    font-size: 0.85rem;
+    color: var(--muted-mid);
+    line-height: 1.55;
+    margin-bottom: 1.25rem;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .recent-sessions-empty a {
+    display: inline-block;
+    background: var(--accent);
+    color: #0F1A00;
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-family: 'DM Sans', sans-serif;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .recent-sessions-empty a:hover {
+    box-shadow: 0 0 20px var(--accent-glow);
+    transform: translateY(-1px);
   }
 
   /* ── BOTTOM GRID ── */
@@ -435,7 +490,20 @@
     gap: 0.75rem;
   }
 
-  .context-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .context-icon {
+    min-width: 74px;
+    flex-shrink: 0;
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--muted-mid);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-transform: uppercase;
+  }
 
   .context-meta { flex: 1; }
   .context-name { font-size: 0.82rem; font-weight: 500; }
@@ -454,6 +522,56 @@
     border-radius: 100px;
     transition: width 1s ease;
   }
+
+  /* ── PROFILE CALLOUT (non-blocking) ── */
+  .profile-callout {
+    display: none;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 14px;
+    border: 1px solid rgba(91,141,239,0.35);
+    background: rgba(91,141,239,0.08);
+    font-size: 0.84rem;
+    color: var(--muted-mid);
+    line-height: 1.5;
+  }
+
+  .profile-callout.visible { display: flex; }
+
+  .profile-callout a {
+    color: var(--accent);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .profile-callout a:hover { text-decoration: underline; }
+
+  /* ── DATA PERSIST SUMMARY (profile + sessions) ── */
+  .persist-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.84rem;
+    color: var(--muted-mid);
+    line-height: 1.5;
+  }
+  .persist-summary strong { color: var(--text); font-weight: 500; }
+  .persist-summary a {
+    color: var(--accent);
+    font-weight: 500;
+    text-decoration: none;
+    margin-left: 0.25rem;
+  }
+  .persist-summary a:hover { text-decoration: underline; }
 
   /* ── RESPONSIVE ── */
   @media (max-width: 1100px) {
@@ -498,13 +616,9 @@
   </a>
 
   <div class="sidebar-section">Account</div>
-  <a href="#" class="nav-item">
+  <a href="input.html" class="nav-item">
     <span class="nav-icon">◉</span>
     <span>My Profile</span>
-  </a>
-  <a href="#" class="nav-item">
-    <span class="nav-icon">⚙</span>
-    <span>Settings</span>
   </a>
 
   <div class="sidebar-bottom">
@@ -520,10 +634,17 @@
 
 <!-- ── MAIN ── -->
 <main class="main">
+  <div class="profile-callout" id="profileCallout" role="status">
+    <span>You have not created a personalized profile on this device yet.
+      <a href="input.html">Create your profile</a> to help future estimates fit you better.</span>
+  </div>
+
+  <div class="persist-summary" id="persistSummary" role="status"></div>
+
   <div class="topbar">
     <div class="page-heading">
-      <h1>Welcome back, Irayna 👋</h1>
-      <p>Monday, February 23, 2026 · Your model has 5 sessions of personal data</p>
+      <h1>Welcome back, Irayna</h1>
+      <p>Monday, February 23, 2026 · Static demo context is labeled; real values come from saved prediction snapshots.</p>
     </div>
     <div class="topbar-actions">
       <button class="btn-sm btn-sm-ghost">Export CSV</button>
@@ -535,27 +656,27 @@
   <div class="metrics-row">
     <div class="metric-card">
       <div class="metric-glow" style="background: var(--accent);"></div>
-      <div class="metric-label">Last Peak BAC</div>
+      <div class="metric-label">Static Demo Peak BAC</div>
       <div class="metric-val warn">0.094</div>
-      <div class="metric-change"><span class="down">↑ +0.012</span> from prev. session</div>
+      <div class="metric-change">Static demo context, not session-derived yet</div>
     </div>
     <div class="metric-card">
       <div class="metric-glow" style="background: var(--blue);"></div>
-      <div class="metric-label">Sessions Logged</div>
+      <div class="metric-label">Demo Sessions Logged</div>
       <div class="metric-val">5</div>
-      <div class="metric-change"><span class="up">+2</span> this month</div>
+      <div class="metric-change">Placeholder until fitted model is added</div>
     </div>
     <div class="metric-card">
       <div class="metric-glow" style="background: #C8F04D;"></div>
-      <div class="metric-label">Personal r̂ Estimate</div>
+      <div class="metric-label">Demo r̂ Scaffold</div>
       <div class="metric-val safe">0.61</div>
-      <div class="metric-change">↓ 0.04 from NHANES prior (0.65)</div>
+      <div class="metric-change">Placeholder coefficient context</div>
     </div>
     <div class="metric-card">
       <div class="metric-glow" style="background: var(--orange);"></div>
-      <div class="metric-label">Avg β̂ Rate</div>
+      <div class="metric-label">Demo β̂ Rate</div>
       <div class="metric-val">0.0153</div>
-      <div class="metric-change"><span class="up">+0.0003</span> vs population avg</div>
+      <div class="metric-change">Model personalization not enabled</div>
     </div>
   </div>
 
@@ -565,10 +686,10 @@
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">BAC History — All Sessions</div>
-          <div class="card-sub">Peak BAC recorded per session over time</div>
+          <div class="card-title">Static Demo BAC History</div>
+          <div class="card-sub">Static demo context, not session-derived yet</div>
         </div>
-        <span class="pill pill-green">↑ Model updating</span>
+        <span class="pill pill-green">Demo context</span>
       </div>
       <div class="graph-wrap">
         <svg viewBox="0 0 560 200" preserveAspectRatio="none">
@@ -587,7 +708,7 @@
           <line x1="0" y1="80" x2="560" y2="80" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
           <line x1="0" y1="120" x2="560" y2="120" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
           <line x1="0" y1="160" x2="560" y2="160" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-          <!-- 0.08 limit -->
+          <!-- Common 0.08 BAC driving threshold marker -->
           <line x1="0" y1="96" x2="560" y2="96" stroke="rgba(255,107,107,0.3)" stroke-width="1" stroke-dasharray="6,4"/>
           <text x="8" y="91" font-size="9" fill="rgba(255,107,107,0.6)" font-family="DM Sans">0.08</text>
           <!-- Area -->
@@ -609,55 +730,16 @@
       </div>
     </div>
 
-    <!-- Recent Sessions -->
-    <div class="card">
-      <div class="card-header">
+    <!-- Recent Sessions (populated from localStorage) -->
+    <div class="card" id="recentSessionsCard">
+      <div class="card-header" id="recentSessionsHeader" hidden>
         <div>
           <div class="card-title">Recent Sessions</div>
-          <div class="card-sub">Last 5 recorded</div>
+          <div class="card-sub" id="recentSessionsSub">Up to 5 most recent</div>
         </div>
-        <a href="history.html" style="font-size: 0.78rem; color: var(--accent); text-decoration: none;">View all →</a>
+        <a href="history.html" id="recentSessionsViewAll" style="font-size: 0.78rem; color: var(--accent); text-decoration: none;">View all →</a>
       </div>
-      <div class="session-item">
-        <div class="session-icon" style="background: rgba(255,107,107,0.12);">🥃</div>
-        <div class="session-meta">
-          <div class="session-name">Deltopia Pre-game</div>
-          <div class="session-date">Feb 22, 2026</div>
-        </div>
-        <span class="session-bac" style="color: var(--red);">0.094</span>
-      </div>
-      <div class="session-item">
-        <div class="session-icon" style="background: rgba(255,179,71,0.1);">🍺</div>
-        <div class="session-meta">
-          <div class="session-name">House Party</div>
-          <div class="session-date">Feb 14, 2026</div>
-        </div>
-        <span class="session-bac" style="color: var(--orange);">0.082</span>
-      </div>
-      <div class="session-item">
-        <div class="session-icon" style="background: var(--accent-dim);">🍷</div>
-        <div class="session-meta">
-          <div class="session-name">Valentine's Dinner</div>
-          <div class="session-date">Feb 7, 2026</div>
-        </div>
-        <span class="session-bac" style="color: var(--accent);">0.041</span>
-      </div>
-      <div class="session-item">
-        <div class="session-icon" style="background: rgba(91,141,239,0.1);">🎉</div>
-        <div class="session-meta">
-          <div class="session-name">Birthday Party</div>
-          <div class="session-date">Jan 29, 2026</div>
-        </div>
-        <span class="session-bac" style="color: var(--orange);">0.071</span>
-      </div>
-      <div class="session-item">
-        <div class="session-icon" style="background: rgba(255,255,255,0.05);">🍻</div>
-        <div class="session-meta">
-          <div class="session-name">Friday Kick-back</div>
-          <div class="session-date">Jan 25, 2026</div>
-        </div>
-        <span class="session-bac" style="color: var(--accent);">0.053</span>
-      </div>
+      <div id="recentSessionsBody"></div>
     </div>
   </div>
 
@@ -668,8 +750,8 @@
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">Personal r̂ Convergence</div>
-          <div class="card-sub">How close your estimate is to optimal</div>
+          <div class="card-title">Scaffold r̂ Confidence</div>
+          <div class="card-sub">Placeholder until fitted model is added</div>
         </div>
       </div>
       <div class="radial-wrap">
@@ -681,11 +763,11 @@
         </svg>
         <div class="radial-center">
           <div class="radial-val">70%</div>
-          <div class="radial-label">confidence</div>
+          <div class="radial-label">demo</div>
         </div>
       </div>
       <p style="font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 0.5rem;">
-        Log <strong style="color: var(--accent);">3 more sessions</strong> to reach high confidence
+        Model personalization not enabled; future fitted models can replace this card.
       </p>
     </div>
 
@@ -693,53 +775,53 @@
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">Last Session Context</div>
-          <div class="card-sub">Factors applied to β modifier</div>
+          <div class="card-title">Demo Session Context</div>
+          <div class="card-sub">Static demo context, not applied to current model</div>
         </div>
-        <span class="pill pill-orange">Suboptimal</span>
+        <span class="pill pill-orange">Demo context</span>
       </div>
       <div class="context-row">
         <div class="context-item">
-          <span class="context-icon">🌙</span>
+          <span class="context-icon">Sleep</span>
           <div class="context-meta">
             <div class="context-name">Sleep</div>
-            <div class="context-val">5.5 hrs (below avg) · δ₁ = −0.002</div>
+            <div class="context-val">5.5 hrs · placeholder δ₁ = −0.002</div>
             <div class="progress-bar" style="margin-top: 0.4rem;"><div class="progress-fill" style="width: 46%; background: var(--orange);"></div></div>
           </div>
         </div>
         <div class="context-item">
-          <span class="context-icon">💧</span>
+          <span class="context-icon">Hydration</span>
           <div class="context-meta">
             <div class="context-name">Hydration</div>
-            <div class="context-val">Moderate · δ₂ = +0.001</div>
+            <div class="context-val">Moderate · placeholder δ₂ = +0.001</div>
             <div class="progress-bar"><div class="progress-fill" style="width: 60%; background: var(--blue);"></div></div>
           </div>
         </div>
         <div class="context-item">
-          <span class="context-icon">🍔</span>
+          <span class="context-icon">Food</span>
           <div class="context-meta">
             <div class="context-name">Food consumed</div>
-            <div class="context-val">Ate ~4hrs prior · δ₃ = −0.001</div>
+            <div class="context-val">Ate ~4hrs prior · placeholder δ₃ = −0.001</div>
             <div class="progress-bar"><div class="progress-fill" style="width: 35%; background: var(--red);"></div></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Drink suggestion -->
+    <!-- Threshold reference -->
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">Tonight's Suggestion</div>
-          <div class="card-sub">Based on your current profile</div>
+          <div class="card-title">Threshold Reference</div>
+          <div class="card-sub">Static demo estimate, not a drinking recommendation</div>
         </div>
-        <span class="pill pill-green">Safe</span>
+        <span class="pill pill-green">Scaffold estimate</span>
       </div>
       <div style="text-align: center; padding: 1.5rem 0 1rem;">
         <div style="font-family: 'Syne', sans-serif; font-weight: 800; font-size: 3.5rem; color: var(--accent); letter-spacing: -3px; line-height: 1;">3–4</div>
-        <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem;">standard drinks to stay under 0.08%</div>
+        <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem;">estimated standard drinks, relative to the common 0.08 BAC driving threshold</div>
         <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.75rem; padding: 0.6rem; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid var(--border);">
-          Based on: r̂=0.61, β̂=0.0153, <br>tonight's body weight + session context
+          Static demo context: r̂=0.61, β̂=0.0153.<br>Model personalization not enabled.
         </div>
       </div>
       <a href="bac-calculator.html"><button class="btn-sm btn-sm-accent" style="width: 100%; border-radius: 12px; padding: 0.75rem; font-size: 0.9rem;">Start Logging →</button></a>
@@ -748,7 +830,125 @@
   </div>
 </main>
 
+<script src="session-storage.js"></script>
 <script>
+  (function persistSummaryInit() {
+    var el = document.getElementById('persistSummary');
+    if (!el) return;
+    var hasProfile = false;
+    try {
+      hasProfile = !!localStorage.getItem('safer_user_profile');
+    } catch (e1) { /* ignore */ }
+    var nSessions = 0;
+    try {
+      nSessions = typeof SaferSessionStorage !== 'undefined' ? SaferSessionStorage.getSessions().length : 0;
+    } catch (e2) { /* ignore */ }
+    var parts = [
+      '<strong>Profile:</strong> ' + (hasProfile ? 'saved on this device' : 'not set') +
+        (hasProfile ? '' : ' · <a href="input.html">Add profile</a>'),
+      '<strong>Sessions saved:</strong> ' + nSessions
+    ];
+    if (nSessions === 0) {
+      parts.push('<span style="flex-basis:100%; margin-top:0.25rem;">No drinking sessions yet — <a href="bac-calculator.html">start one on the BAC Calculator</a>.</span>');
+    }
+    el.innerHTML = parts.join(' <span style="color:var(--border-bright);">·</span> ');
+  })();
+
+  (function profileCalloutInit() {
+    try {
+      if (!localStorage.getItem('safer_user_profile')) {
+        document.getElementById('profileCallout').classList.add('visible');
+      }
+    } catch (e) { /* ignore */ }
+  })();
+
+  (function recentSessionsInit() {
+    var body = document.getElementById('recentSessionsBody');
+    var header = document.getElementById('recentSessionsHeader');
+    if (!body || !header) return;
+
+    var sessions = [];
+    try {
+      if (typeof SaferSessionStorage !== 'undefined') {
+        sessions = SaferSessionStorage.getSessions().slice();
+      } else {
+        var raw = localStorage.getItem('safer_sessions');
+        if (raw) sessions = JSON.parse(raw);
+        if (!Array.isArray(sessions)) sessions = [];
+      }
+    } catch (e) {
+      sessions = [];
+    }
+
+    sessions.sort(function (a, b) {
+      var ta = new Date((a && a.started_at) || 0).getTime();
+      var tb = new Date((b && b.started_at) || 0).getTime();
+      return tb - ta;
+    });
+
+    var top = sessions.slice(0, 5);
+
+    function formatWhen(iso) {
+      if (!iso) return '—';
+      try {
+        var d = new Date(iso);
+        return isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      } catch (e2) {
+        return '—';
+      }
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function isReviewPending(s) {
+      if (typeof SaferSessionStorage !== 'undefined' && typeof SaferSessionStorage.isReviewPending === 'function') {
+        return SaferSessionStorage.isReviewPending(s);
+      }
+      return s && s.status === 'completed' && s.review_status !== 'completed' && !s.post_session_review;
+    }
+
+    if (top.length === 0) {
+      header.hidden = true;
+      body.innerHTML =
+        '<div class="recent-sessions-empty">' +
+          '<h3>No sessions yet</h3>' +
+          '<p>Start your first session to begin tracking.</p>' +
+          '<a href="bac-calculator.html">Start session</a>' +
+        '</div>';
+      return;
+    }
+
+    header.hidden = false;
+    var n = top.length;
+    body.innerHTML = top.map(function (s, i) {
+      var label = s && s.title ? s.title : ('Session ' + (i + 1));
+      var st = (s && s.status) ? esc(s.status) : '—';
+      var events = Array.isArray(s.events) ? s.events : [];
+      var drinkEvents = events.filter(function (e) { return e && e.event_type === 'drink'; });
+      var snap = s && s.prediction_snapshot ? s.prediction_snapshot : null;
+      var pendingReview = isReviewPending(s);
+      var extra = snap
+        ? ('Latest session estimate ' + Number(snap.bac_low).toFixed(3) + '-' + Number(snap.bac_high).toFixed(3))
+        : ('Drink events: ' + drinkEvents.length);
+      var reviewLink = pendingReview
+        ? '<div class="session-review-note"><a href="history.html">Review pending</a></div>'
+        : '';
+      return (
+        '<div class="session-item">' +
+          '<div class="session-icon" style="background: rgba(200,240,77,0.1);">Session</div>' +
+          '<div class="session-meta">' +
+            '<div class="session-name">' + esc(label) + '</div>' +
+            '<div class="session-date">' + formatWhen(s.started_at) + ' · ' + esc(extra) + '</div>' +
+            reviewLink +
+          '</div>' +
+          '<span class="session-status-pill">' + st + '</span>' +
+        '</div>'
+      );
+    }).join('');
+  })();
+
   // Animate progress bars on load
   window.addEventListener('load', () => {
     const fills = document.querySelectorAll('.progress-fill');

@@ -500,13 +500,20 @@
   .feature-card:hover::after { opacity: 1; }
 
   .feature-icon {
-    width: 44px; height: 44px;
+    min-width: 44px;
+    height: 32px;
+    width: fit-content;
+    padding: 0 0.75rem;
     background: var(--accent-dim);
-    border-radius: 12px;
+    border-radius: 999px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent);
     margin-bottom: 1.25rem;
     border: 1px solid rgba(200,240,77,0.2);
   }
@@ -760,7 +767,7 @@
     <li><a href="#features">Features</a></li>
     <li><a href="#how">How it works</a></li>
     <li><a href="#about">About</a></li>
-    <li><a href="#login" class="nav-cta">Get started</a></li>
+    <li><a href="input.html" class="nav-cta">Get started</a></li>
   </ul>
 </nav>
 
@@ -774,7 +781,7 @@
         <span class="accent-text">limits.</span>
       </h1>
       <p class="hero-desc">
-        Safer uses personalized BAC modeling — powered by the Widmark formula and Bayesian estimation — to help you understand your body's response to alcohol in real time.
+        Safer uses personalized BAC estimation powered by a deterministic Widmark-style model, with structured session data ready for future personalization.
       </p>
       <div class="hero-actions">
         <a href="#how" class="btn-ghost">See how it works</a>
@@ -809,12 +816,12 @@
         </div>
         <button class="login-submit">Sign In →</button>
         <div class="divider">or</div>
-        <a href="#" class="social-login">
+        <a href="input.html" class="social-login">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" fill="#8A96B0"/></svg>
           Continue with GitHub
         </a>
         <div class="login-footer">
-          No account? <a href="#">Create one free</a>
+          No account? <a href="input.html">Create one free</a>
         </div>
       </div>
     </div>
@@ -825,36 +832,36 @@
     <div class="reveal">
       <div class="section-tag">Features</div>
       <h2 class="section-title">Built for real people,<br>not textbooks</h2>
-      <p class="section-desc">Every body is different. Safer adapts its model to you over time using Bayesian shrinkage estimation, getting smarter with every session you log.</p>
+      <p class="section-desc">Every body is different. Safer starts with deterministic estimates and stores structured session history for future personalization.</p>
     </div>
     <div class="features-grid reveal">
       <div class="feature-card">
-        <div class="feature-icon">🧬</div>
+        <div class="feature-icon">Profile</div>
         <div class="feature-title">Personalized r Estimation</div>
-        <div class="feature-desc">We replace the Widmark formula's fixed body water constant with a regression model trained on NHANES data. Your r adapts as you log sessions.</div>
+        <div class="feature-desc">Profile data initializes a personalized r estimate while the app keeps the model behavior deterministic and transparent.</div>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">📊</div>
+        <div class="feature-icon">Curve</div>
         <div class="feature-title">Real-Time BAC Curve</div>
         <div class="feature-desc">Visualize your BAC trajectory over time — before, during, and after drinking — with live-updating estimates as conditions change.</div>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">🌙</div>
-        <div class="feature-title">Context-Aware Modifiers</div>
-        <div class="feature-desc">Slept 4 hours? Skipped dinner? Dehydrated? Safer adjusts your elimination rate β using pre-session inputs that actually matter.</div>
+        <div class="feature-icon">Context</div>
+        <div class="feature-title">Session Event Tracking</div>
+        <div class="feature-desc">Log drink and symptom events during a session so estimates and later reviews are tied to real activity.</div>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">🔮</div>
-        <div class="feature-title">Bayesian Profile Update</div>
-        <div class="feature-desc">As sessions accumulate, population priors fade. Your personal history carries more weight. The model becomes uniquely yours.</div>
+        <div class="feature-icon">Model</div>
+        <div class="feature-title">Future Personalization</div>
+        <div class="feature-desc">Completed sessions and post-session reviews create the structured data needed for later personalization work.</div>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">📝</div>
+        <div class="feature-icon">History</div>
         <div class="feature-title">Session History</div>
-        <div class="feature-desc">Log every drink, every feeling, every context. Your history feeds the model and lets you track patterns across time.</div>
+        <div class="feature-desc">Review saved sessions, drink events, symptoms, and estimate snapshots so patterns can be inspected over time.</div>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">🛡️</div>
+        <div class="feature-icon">Guidance</div>
         <div class="feature-title">Safer, Not Preachy</div>
         <div class="feature-desc">This isn't a sobriety app. It's a harm reduction tool. We give you honest information so you can make smart, informed choices.</div>
       </div>
@@ -871,16 +878,16 @@
       </p>
       <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
         <li style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; color: var(--muted-mid);">
-          <span style="width: 20px; height: 20px; background: var(--accent-dim); border: 1px solid rgba(200,240,77,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--accent); flex-shrink: 0;">✓</span>
+          <span style="min-width: 64px; height: 22px; padding: 0 0.5rem; background: var(--accent-dim); border: 1px solid rgba(200,240,77,0.3); border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); flex-shrink: 0;">Included</span>
           Peak BAC prediction with 30-min lag accounted for
         </li>
         <li style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; color: var(--muted-mid);">
-          <span style="width: 20px; height: 20px; background: var(--accent-dim); border: 1px solid rgba(200,240,77,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--accent); flex-shrink: 0;">✓</span>
-          Safe drinking range suggestion per session
+          <span style="min-width: 64px; height: 22px; padding: 0 0.5rem; background: var(--accent-dim); border: 1px solid rgba(200,240,77,0.3); border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); flex-shrink: 0;">Included</span>
+          Estimated range context, not a drinking recommendation
         </li>
         <li style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; color: var(--muted-mid);">
-          <span style="width: 20px; height: 20px; background: var(--accent-dim); border: 1px solid rgba(200,240,77,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--accent); flex-shrink: 0;">✓</span>
-          Legal limit (0.08%) clearly marked
+          <span style="min-width: 64px; height: 22px; padding: 0 0.5rem; background: var(--accent-dim); border: 1px solid rgba(200,240,77,0.3); border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); flex-shrink: 0;">Included</span>
+          Common 0.08 BAC driving threshold clearly marked
         </li>
       </ul>
     </div>
@@ -930,8 +937,8 @@
           <div class="bac-metric-label">Predicted Peak</div>
         </div>
         <div class="bac-metric">
-          <div class="bac-metric-val safe">+1 drink</div>
-          <div class="bac-metric-label">Safe to have</div>
+          <div class="bac-metric-val safe">Range</div>
+          <div class="bac-metric-label">Estimate context</div>
         </div>
       </div>
     </div>
@@ -947,12 +954,12 @@
       <div class="step-card">
         <div class="step-num">01</div>
         <div class="step-title">Build your profile</div>
-        <div class="step-desc">Enter your biological data — sex, weight, age — to initialize your personal r estimate from our NHANES-trained model.</div>
+        <div class="step-desc">Enter your biological data — sex, weight, age — to initialize a deterministic personal r estimate.</div>
       </div>
       <div class="step-card">
         <div class="step-num">02</div>
-        <div class="step-title">Set the context</div>
-        <div class="step-desc">Tell Safer about today: how much you slept, when you ate, how hydrated you are. These adjust your β elimination rate.</div>
+        <div class="step-title">Start a session</div>
+        <div class="step-desc">Begin a drinking session so elapsed time comes from the session timeline instead of a manual slider.</div>
       </div>
       <div class="step-card">
         <div class="step-num">03</div>
@@ -961,8 +968,8 @@
       </div>
       <div class="step-card">
         <div class="step-num">04</div>
-        <div class="step-title">Model learns you</div>
-        <div class="step-desc">Post-session feedback refines your personal estimates. The more you log, the more accurate Safer becomes for you.</div>
+        <div class="step-title">Review afterward</div>
+        <div class="step-desc">Post-session feedback is stored as subjective context for future calibration work, not as a direct BAC measurement.</div>
       </div>
     </div>
   </section>
@@ -1006,9 +1013,10 @@
     this.textContent = 'Signing in...';
     this.style.opacity = '0.8';
     setTimeout(() => {
-      this.textContent = 'Welcome back ✓';
+      this.textContent = 'Welcome back';
       this.style.background = '#5B8DEF';
       this.style.color = 'white';
+      window.location.href = 'input.html';
     }, 1200);
   });
 </script>
