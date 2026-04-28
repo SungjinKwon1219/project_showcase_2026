@@ -720,7 +720,7 @@
               '<div class="review-field"><label for="reviewBlackout">Blackout?</label><select id="reviewBlackout" name="blackout"><option value="false">No</option><option value="true">Yes</option></select></div>' +
               '<div class="review-field"><label for="reviewMemoryGap">Memory gaps?</label><select id="reviewMemoryGap" name="memory_gap"><option value="false">No</option><option value="true">Yes</option></select></div>' +
               '<div class="review-field"><label for="reviewHydration">Hydration after</label><select id="reviewHydration" name="hydration_after"><option value="unknown">Unknown</option><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></div>' +
-              '<div class="review-field"><label for="reviewFeltSober">When did you feel sober?</label><input id="reviewFeltSober" name="felt_sober_time" type="text" placeholder="Optional time or note"></div>' +
+              '<div class="review-field"><label for="reviewFeltSober">Hours until felt sober (e.g. 4.5)</label><input id="reviewFeltSober" name="felt_sober_hours" type="number" min="0.5" max="24" step="0.5" placeholder="e.g. 4.5 — used to refine your personal β estimate"></div>' +
               '<div class="review-field"><label for="reviewSleep">Sleep hours after session</label><input id="reviewSleep" name="sleep_hours_after" type="number" min="0" max="24" step="0.25" placeholder="Optional"></div>' +
               '<div class="review-field full"><label for="reviewNotes">Notes</label><textarea id="reviewNotes" name="notes" placeholder="Optional context"></textarea></div>' +
             '</div>' +
@@ -732,7 +732,7 @@
     if (s.post_session_review) {
       var r = s.post_session_review;
       var saved = lastReviewSavedSessionId === s.session_id
-        ? '<div class="review-confirmation">Review saved. Predictions were not changed.</div>'
+        ? '<div class="review-confirmation">✓ Review saved.' + (r.implied_beta != null ? ' Implied β=' + r.implied_beta.toFixed(5) + ' stored — will update your next estimate.' : ' Enter hours until felt sober to enable Bayesian personalization.') + '</div>'
         : '';
       return saved +
         '<div class="review-panel">' +
@@ -743,7 +743,8 @@
           '<div class="detail-row"><span class="detail-key">Vomited / blackout / memory gaps</span><span class="detail-value">' + escapeHtml([r.vomited ? 'vomited' : null, r.blackout ? 'blackout' : null, r.memory_gap ? 'memory gaps' : null].filter(Boolean).join(', ') || 'No') + '</span></div>' +
           '<div class="detail-row"><span class="detail-key">Hydration after</span><span class="detail-value">' + escapeHtml(r.hydration_after || 'unknown') + '</span></div>' +
           '<div class="detail-row"><span class="detail-key">Sleep hours after</span><span class="detail-value">' + escapeHtml(r.sleep_hours_after == null ? '—' : r.sleep_hours_after) + '</span></div>' +
-          '<div class="detail-row"><span class="detail-key">Felt sober time</span><span class="detail-value">' + escapeHtml(r.felt_sober_time || '—') + '</span></div>' +
+          '<div class="detail-row"><span class="detail-key">Felt sober after</span><span class="detail-value">' + escapeHtml(r.felt_sober_hours != null ? r.felt_sober_hours + ' hours' : (r.felt_sober_time || '—')) + '</span></div>' +
+          '<div class="detail-row"><span class="detail-key">Implied β (personalization)</span><span class="detail-value">' + (r.implied_beta != null ? r.implied_beta.toFixed(5) + ' — stored for future estimates' : 'Not computed (sober time not entered or server offline)') + '</span></div>' +
           '<div class="detail-row"><span class="detail-key">Notes</span><span class="detail-value">' + escapeHtml(r.notes || '—') + '</span></div>' +
         '</div>';
     }
@@ -751,11 +752,13 @@
     return '<div class="model-update"><strong>Note:</strong> Post-session review is available after a session is completed. Reviews do not change the estimator yet.</div>';
   }
 
-  function handleReviewSubmit(event) {
+  async function handleReviewSubmit(event) {
     event.preventDefault();
     var form = event.currentTarget;
     var sessionId = form.dataset.sessionId;
-    var sleepRaw = form.elements.sleep_hours_after.value;
+    var sleepRaw  = form.elements.sleep_hours_after.value;
+    var feltRaw   = form.elements.felt_sober_hours ? form.elements.felt_sober_hours.value : '';
+    var feltHours = feltRaw !== '' ? Number(feltRaw) : null;
     var review = {
       submitted_at: new Date().toISOString(),
       hangover_severity: Number(form.elements.hangover_severity.value),
@@ -763,18 +766,37 @@
       vomited: form.elements.vomited.value === 'true',
       blackout: form.elements.blackout.value === 'true',
       memory_gap: form.elements.memory_gap.value === 'true',
-      felt_sober_time: form.elements.felt_sober_time.value.trim(),
+      felt_sober_hours: feltHours,
+      felt_sober_time: feltHours != null ? feltHours + 'h' : '',
       sleep_hours_after: sleepRaw === '' ? null : Number(sleepRaw),
       hydration_after: form.elements.hydration_after.value,
-      notes: form.elements.notes.value.trim()
+      notes: form.elements.notes.value.trim(),
+      implied_beta: null
     };
+    // Try to back-calculate implied beta from session snapshot
+    var session = S.getSessionById(sessionId);
+    var snap = session && session.prediction_snapshot;
+    if (snap && snap.r && feltHours && feltHours > 0) {
+      try {
+        var events = Array.isArray(session.events) ? session.events : [];
+        var grams = events.filter(function(e) { return e && e.event_type === 'drink'; })
+          .reduce(function(s, e) { return s + (Number(e.grams_alcohol) || 0); }, 0);
+        var profile = JSON.parse(localStorage.getItem('safer_user_profile') || 'null');
+        var weightKg = profile && profile.weight_lbs ? profile.weight_lbs * 0.453592 : null;
+        if (grams > 0 && weightKg) {
+          var res = await fetch('http://localhost:8000/implied-beta', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ grams_alcohol: grams, weight_kg: weightKg, r: snap.r, felt_sober_hours: feltHours })
+          });
+          if (res.ok) { var d = await res.json(); if (d.implied_beta) review.implied_beta = d.implied_beta; }
+        }
+      } catch(e) { /* server offline — non-fatal */ }
+    }
     var updated = S.savePostSessionReview(sessionId, review);
     if (!updated) return;
     selectedSessionId = updated.session_id;
     lastReviewSavedSessionId = updated.session_id;
-    loadSorted();
-    updateSummary();
-    renderTable();
+    loadSorted(); updateSummary(); renderTable();
   }
 
   function updateSummary() {
