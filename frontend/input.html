@@ -3,206 +3,84 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Your profile — Safer</title>
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Safer">
+<title>My Profile — Safer</title>
 <meta name="theme-color" content="#060910">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon.png">
-
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #060910;
-    --sidebar: #080C14;
-    --surface: rgba(255,255,255,0.04);
-    --surface-hover: rgba(255,255,255,0.07);
-    --border: rgba(255,255,255,0.08);
-    --border-bright: rgba(255,255,255,0.15);
-    --accent: #C8F04D;
-    --accent-dim: rgba(200,240,77,0.12);
-    --accent-glow: rgba(200,240,77,0.3);
-    --red: #FF6B6B;
-    --orange: #FFB347;
-    --blue: #5B8DEF;
-    --text: #F0F4FF;
-    --muted: #6B7A99;
-    --muted-mid: #8A96B0;
+    --bg:#060910;--sidebar:#080C14;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);
+    --border-bright:rgba(255,255,255,0.15);--accent:#C8F04D;--accent-dim:rgba(200,240,77,0.12);
+    --accent-glow:rgba(200,240,77,0.3);--red:#FF6B6B;--orange:#FFB347;--blue:#5B8DEF;
+    --text:#F0F4FF;--muted:#6B7A99;--muted-mid:#8A96B0;
   }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 300;
-    min-height: 100vh;
-    display: flex;
-  }
-
-  .sidebar {
-    width: 240px;
-    min-height: 100vh;
-    background: var(--sidebar);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    padding: 1.75rem 1.25rem;
-    position: fixed;
-    top: 0; left: 0; bottom: 0;
-    z-index: 50;
-  }
-  .sidebar-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2.5rem; padding: 0 0.5rem; }
-  .sidebar-logo .dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); animation: pulse 2s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
-  .sidebar-section { font-size: 0.65rem; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 500; padding: 0 0.5rem; margin-bottom: 0.6rem; margin-top: 1.5rem; }
-  .sidebar-section:first-of-type { margin-top: 0; }
-  .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 10px; cursor: pointer; text-decoration: none; font-size: 0.88rem; color: var(--muted-mid); transition: background 0.15s, color 0.15s; margin-bottom: 0.2rem; }
-  .nav-item:hover { background: var(--surface-hover); color: var(--text); }
-  .nav-item.active { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(200,240,77,0.2); }
-  .nav-icon { font-size: 1rem; flex-shrink: 0; }
-  .sidebar-bottom { margin-top: auto; border-top: 1px solid var(--border); padding-top: 1.25rem; }
-  .user-pill { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 10px; cursor: pointer; transition: background 0.15s; }
-  .user-pill:hover { background: var(--surface-hover); }
-  .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #C8F04D 0%, #5B8DEF 100%); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: #0F1A00; flex-shrink: 0; }
-  .user-name { font-size: 0.83rem; font-weight: 500; color: var(--text); }
-  .user-email { font-size: 0.72rem; color: var(--muted); }
-
-  .main { margin-left: 240px; flex: 1; padding: 2rem 2.5rem; max-width: 720px; }
-
-  .page-heading h1 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: -0.5px; }
-  .page-heading p { font-size: 0.9rem; color: var(--muted-mid); margin-top: 0.5rem; line-height: 1.6; max-width: 520px; }
-
-  .profile-note {
-    font-size: 0.8rem;
-    color: var(--muted-mid);
-    background: var(--accent-dim);
-    border: 1px solid rgba(200,240,77,0.2);
-    border-radius: 12px;
-    padding: 0.75rem 1rem;
-    margin-top: 1rem;
-    line-height: 1.5;
-  }
-
-  .form-card {
-    margin-top: 2rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    overflow: hidden;
-  }
-
-  .form-card::before {
-    content: '';
-    display: block;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(200,240,77,0.35), transparent);
-  }
-
-  .form-section { padding: 1.75rem; border-bottom: 1px solid var(--border); }
-  .form-section:last-of-type { border-bottom: none; }
-
-  .field { margin-bottom: 1.25rem; }
-  .field:last-child { margin-bottom: 0; }
-
-  .field label {
-    display: block;
-    font-size: 0.73rem;
-    color: var(--muted);
-    margin-bottom: 0.45rem;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-    font-weight: 500;
-  }
-
-  .field input, .field select {
-    width: 100%;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 0.75rem 1rem;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.9rem;
-    outline: none;
-    transition: border-color 0.2s, background 0.2s;
-  }
-
-  .field input:focus, .field select:focus {
-    border-color: var(--accent);
-    background: rgba(200,240,77,0.04);
-  }
-
-  .field select { cursor: pointer; }
-  .field select option { background: #1a2233; }
-
-  .field-error {
-    font-size: 0.78rem;
-    color: var(--red);
-    margin-top: 0.35rem;
-    display: none;
-  }
-  .field-error.visible { display: block; }
-  .field.has-error input, .field.has-error select { border-color: rgba(255,107,107,0.5); }
-
-  .form-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    align-items: center;
-    padding: 1.25rem 1.75rem 1.75rem;
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: #0F1A00;
-    border: none;
-    border-radius: 12px;
-    padding: 0.85rem 1.75rem;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: box-shadow 0.25s, transform 0.2s;
-  }
-  .btn-primary:hover { box-shadow: 0 0 24px var(--accent-glow); transform: translateY(-1px); }
-
-  .btn-ghost {
-    background: transparent;
-    color: var(--muted-mid);
-    border: 1px solid var(--border-bright);
-    border-radius: 12px;
-    padding: 0.85rem 1.25rem;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s, background 0.2s;
-  }
-  .btn-ghost:hover { border-color: rgba(255,255,255,0.25); color: var(--text); background: var(--surface-hover); }
-
-  .global-form-error {
-    display: none;
-    font-size: 0.82rem;
-    color: var(--red);
-    padding: 0 1.75rem 0.5rem;
-  }
-  .global-form-error.visible { display: block; }
-
-  @media (max-width: 800px) {
-    .sidebar { width: 64px; padding: 1rem 0.75rem; }
-    .sidebar-logo span:last-child,
-    .sidebar-section, .user-pill .user-info,
-    .nav-item span:last-child { display: none; }
-    .nav-item { justify-content: center; padding: 0.65rem; }
-    .user-pill { justify-content: center; }
-    .main { margin-left: 64px; padding: 1.5rem; max-width: none; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:300;min-height:100vh;display:flex;}
+  .sidebar{width:240px;min-height:100vh;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.75rem 1.25rem;position:fixed;top:0;left:0;bottom:0;z-index:50;}
+  .sidebar-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-0.5px;display:flex;align-items:center;gap:0.5rem;margin-bottom:2.5rem;padding:0 0.5rem;}
+  .sidebar-logo .dot{width:8px;height:8px;background:var(--accent);border-radius:50%;box-shadow:0 0 10px var(--accent);animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+  .sidebar-section{font-size:0.65rem;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;font-weight:500;padding:0 0.5rem;margin-bottom:0.6rem;margin-top:1.5rem;}
+  .nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:10px;cursor:pointer;text-decoration:none;font-size:0.88rem;color:var(--muted-mid);transition:background 0.15s,color 0.15s;margin-bottom:0.2rem;}
+  .nav-item:hover{background:rgba(255,255,255,0.07);color:var(--text);}
+  .nav-item.active{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,240,77,0.2);}
+  .nav-icon{font-size:1rem;flex-shrink:0;}
+  .sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding-top:1.25rem;}
+  .user-pill{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:10px;}
+  .user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#C8F04D 0%,#5B8DEF 100%);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#0F1A00;flex-shrink:0;}
+  .user-name{font-size:0.83rem;font-weight:500;color:var(--text);}
+  .user-email{font-size:0.72rem;color:var(--muted);}
+  .main{margin-left:240px;flex:1;padding:2rem 2.5rem;max-width:680px;}
+  .page-heading{margin-bottom:2rem;}
+  .page-heading h1{font-family:'Syne',sans-serif;font-weight:700;font-size:1.5rem;letter-spacing:-0.5px;}
+  .page-heading p{font-size:0.88rem;color:var(--muted-mid);margin-top:0.4rem;line-height:1.6;}
+  .banner{display:flex;align-items:flex-start;gap:0.75rem;padding:0.9rem 1.1rem;border-radius:14px;font-size:0.84rem;color:var(--muted-mid);line-height:1.5;margin-bottom:1.5rem;}
+  .banner-info{border:1px solid rgba(91,141,239,0.35);background:rgba(91,141,239,0.08);}
+  .banner-success{border:1px solid rgba(200,240,77,0.3);background:rgba(200,240,77,0.07);color:var(--accent);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:1.5rem;}
+  .card::before{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,rgba(200,240,77,0.3),transparent);}
+  .card-section{padding:1.5rem 1.75rem;border-bottom:1px solid var(--border);}
+  .card-section:last-child{border-bottom:none;}
+  .card-section-title{font-family:'Syne',sans-serif;font-weight:600;font-size:0.82rem;color:var(--muted-mid);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:1.25rem;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+  .field-row.thirds{grid-template-columns:1fr 1fr 1fr;}
+  .field{margin-bottom:0;}
+  .field label{display:block;font-size:0.73rem;color:var(--muted);margin-bottom:0.4rem;letter-spacing:0.3px;text-transform:uppercase;font-weight:500;}
+  .field input,.field select{width:100%;min-height:44px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:0.7rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.2s,background 0.2s;-webkit-appearance:none;}
+  .field input:focus,.field select:focus{border-color:var(--accent);background:rgba(200,240,77,0.04);}
+  .field select option{background:#1a2233;}
+  .field input::placeholder{color:var(--muted);}
+  .field-hint{font-size:0.73rem;color:var(--muted);margin-top:0.35rem;line-height:1.45;}
+  .field-error{font-size:0.75rem;color:var(--red);margin-top:0.3rem;display:none;}
+  .field-error.visible{display:block;}
+  .field.has-error input,.field.has-error select{border-color:rgba(255,107,107,0.5);}
+  .input-with-unit{display:flex;align-items:center;gap:0.5rem;}
+  .input-with-unit input{flex:1;}
+  .unit-label{font-size:0.78rem;color:var(--muted);white-space:nowrap;}
+  .fat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;}
+  .fat-btn{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--muted-mid);padding:0.75rem 0.5rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.82rem;text-align:center;transition:all 0.15s;}
+  .fat-btn:hover{border-color:var(--border-bright);color:var(--text);}
+  .fat-btn.active{background:var(--accent-dim);border-color:rgba(200,240,77,0.35);color:var(--accent);}
+  .fat-btn .fat-range{font-size:0.68rem;color:inherit;opacity:0.7;display:block;margin-top:0.1rem;}
+  .actions{display:flex;gap:0.75rem;padding:1.25rem 1.75rem;}
+  .btn-primary{background:var(--accent);color:#0F1A00;border:none;border-radius:12px;padding:0.85rem 1.75rem;font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;transition:box-shadow 0.2s,transform 0.15s;}
+  .btn-primary:hover{box-shadow:0 0 24px var(--accent-glow);transform:translateY(-1px);}
+  .btn-ghost{background:transparent;color:var(--muted-mid);border:1px solid var(--border-bright);border-radius:12px;padding:0.85rem 1.25rem;font-family:'DM Sans',sans-serif;font-size:0.9rem;cursor:pointer;transition:all 0.15s;text-decoration:none;display:inline-flex;align-items:center;}
+  .btn-ghost:hover{border-color:rgba(255,255,255,0.25);color:var(--text);}
+  .global-error{font-size:0.82rem;color:var(--red);padding:0 1.75rem 0.5rem;display:none;}
+  .global-error.visible{display:block;}
+  @media(max-width:800px){
+    .sidebar{width:64px;padding:1rem 0.75rem;}
+    .sidebar-logo span:last-child,.sidebar-section,.user-info,.nav-item span:last-child{display:none;}
+    .nav-item{justify-content:center;padding:0.65rem;}
+    .user-pill{justify-content:center;}
+    .main{margin-left:64px;padding:1.5rem;max-width:none;}
+    .field-row{grid-template-columns:1fr;}
+    .field-row.thirds{grid-template-columns:1fr;}
   }
 </style>
 </head>
 <body>
-
 <aside class="sidebar">
   <div class="sidebar-logo"><span class="dot"></span><span>safer</span></div>
   <div class="sidebar-section">Main</div>
@@ -213,235 +91,246 @@
   <a href="input.html" class="nav-item active"><span class="nav-icon">◉</span><span>My Profile</span></a>
   <div class="sidebar-bottom">
     <div class="user-pill">
-      <div class="user-avatar">IL</div>
-      <div class="user-info"><div class="user-name">Irayna L.</div><div class="user-email">irayna@ucsb.edu</div></div>
+      <div class="user-avatar" id="avatarInitials">?</div>
+      <div class="user-info"><div class="user-name" id="sidebarName">My Profile</div><div class="user-email">Saved on this device</div></div>
     </div>
   </div>
 </aside>
 
 <main class="main">
   <div class="page-heading">
-    <h1>Create your personalized profile</h1>
-    <p>
-      This information helps Safer tailor future BAC estimates to your body and habits.
-      You can update these answers anytime; nothing here is shared with a server yet — it stays on this device.
-    </p>
-    <p class="profile-note" id="updateNote" hidden>
-      You already have a saved profile. Update the fields below and click <strong style="color: var(--accent);">Save profile</strong> whenever your details change.
-    </p>
+    <h1>My Profile</h1>
+    <p>Your profile personalizes BAC estimates. Everything stays on this device — nothing is uploaded anywhere.</p>
   </div>
 
-  <p class="global-form-error" id="globalError" role="alert"></p>
+  <div class="banner banner-info" id="newUserBanner">
+    👋 <span>Welcome! Fill in your details below to get personalized estimates. All fields help the model — body fat is especially important.</span>
+  </div>
+  <div class="banner banner-success" id="savedBanner" style="display:none;">
+    ✓ Profile saved! Head to <a href="bac-calculator.html" style="color:inherit;font-weight:600;">BAC Calculator</a> to start a session.
+  </div>
 
-  <form class="form-card" id="profileForm" novalidate>
-    <div class="form-section">
-      <div class="field" data-field="sex">
-        <label for="sex">Sex</label>
-        <select id="sex" name="sex" required>
-          <option value="">Select…</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-        </select>
-        <div class="field-error" data-error-for="sex"></div>
+  <p class="global-error" id="globalError" role="alert"></p>
+
+  <form id="profileForm" novalidate>
+    <div class="card">
+      <div class="card-section">
+        <div class="card-section-title">Basic Info</div>
+        <div class="field-row">
+          <div class="field" data-field="name">
+            <label for="nameInput">Your name (optional)</label>
+            <input type="text" id="nameInput" placeholder="e.g. Alex">
+            <div class="field-hint">Shown in the sidebar.</div>
+          </div>
+          <div class="field" data-field="sex">
+            <label for="sexSelect">Biological sex <span style="color:var(--red)">*</span></label>
+            <select id="sexSelect" required>
+              <option value="">Select…</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+            <div class="field-hint">Used in the r regression model.</div>
+            <div class="field-error" id="err-sex"></div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field" data-field="age_band">
+            <label for="ageBandSelect">Age band <span style="color:var(--red)">*</span></label>
+            <select id="ageBandSelect" required>
+              <option value="">Select…</option>
+              <option value="21-30">21–30</option>
+              <option value="31-40">31–40</option>
+              <option value="41-50">41–50</option>
+              <option value="51-60">51–60</option>
+              <option value="61-70">61–70</option>
+              <option value="71+">71+</option>
+            </select>
+            <div class="field-error" id="err-age_band"></div>
+          </div>
+          <div class="field" data-field="drinks_per_week">
+            <label for="dpwInput">Drinks per week (avg)</label>
+            <input type="number" id="dpwInput" min="0" max="100" step="1" placeholder="e.g. 5">
+            <div class="field-hint">Affects the elimination rate prior.</div>
+          </div>
+        </div>
       </div>
 
-      <div class="field" data-field="age_band">
-        <label for="age_band">Age band</label>
-        <select id="age_band" name="age_band" required>
-          <option value="">Select…</option>
-          <option value="21-30">21–30</option>
-          <option value="31-40">31–40</option>
-          <option value="41-50">41–50</option>
-          <option value="51-60">51–60</option>
-          <option value="61-70">61–70</option>
-          <option value="71+">71+</option>
-        </select>
-        <div class="field-error" data-error-for="age_band"></div>
-      </div>
-
-      <div class="field" data-field="height_in">
-        <label for="height_in">Height (inches)</label>
-        <input type="number" id="height_in" name="height_in" inputmode="decimal" min="1" step="0.1" placeholder="e.g. 70" required>
-        <div class="field-error" data-error-for="height_in"></div>
-      </div>
-
-      <div class="field" data-field="weight_lbs">
-        <label for="weight_lbs">Weight (pounds)</label>
-        <input type="number" id="weight_lbs" name="weight_lbs" inputmode="decimal" min="1" step="0.1" placeholder="e.g. 180" required>
-        <div class="field-error" data-error-for="weight_lbs"></div>
-      </div>
-
-      <div class="field" data-field="body_fat_percent">
-        <label for="body_fat_percent">Body fat percentage</label>
-        <input type="number" id="body_fat_percent" name="body_fat_percent" inputmode="decimal" min="0" max="60" step="0.1" placeholder="e.g. 18.5" required>
-        <div class="field-error" data-error-for="body_fat_percent"></div>
-      </div>
-
-      <div class="field" data-field="drinks_per_week">
-        <label for="drinks_per_week">Drinks per week (standard drinks)</label>
-        <input type="number" id="drinks_per_week" name="drinks_per_week" inputmode="numeric" min="0" step="1" placeholder="e.g. 4" required>
-        <div class="field-error" data-error-for="drinks_per_week"></div>
+      <div class="card-section">
+        <div class="card-section-title">Body Measurements</div>
+        <div class="field-row">
+          <div class="field" data-field="height_in">
+            <label for="heightInput">Height <span style="color:var(--red)">*</span></label>
+            <div class="input-with-unit">
+              <input type="number" id="heightInput" min="36" max="96" step="0.1" placeholder="e.g. 70" required>
+              <span class="unit-label">inches</span>
+            </div>
+            <div class="field-hint">e.g. 5′10″ = 70 in</div>
+            <div class="field-error" id="err-height_in"></div>
+          </div>
+          <div class="field" data-field="weight_lbs">
+            <label for="weightInput">Weight <span style="color:var(--red)">*</span></label>
+            <div class="input-with-unit">
+              <input type="number" id="weightInput" min="50" max="700" step="0.1" placeholder="e.g. 155" required>
+              <span class="unit-label">lbs</span>
+            </div>
+            <div class="field-error" id="err-weight_lbs"></div>
+          </div>
+        </div>
+        <div class="field" data-field="body_fat_percent" style="margin-bottom:0.75rem;">
+          <label for="bodyFatInput">Body fat % <span style="color:var(--red)">*</span></label>
+          <div class="input-with-unit">
+            <input type="number" id="bodyFatInput" min="3" max="65" step="0.1" placeholder="e.g. 18" required>
+            <span class="unit-label">%</span>
+          </div>
+          <div class="field-hint">Don't know your exact number? Use the selector below.</div>
+          <div class="field-error" id="err-body_fat_percent"></div>
+        </div>
+        <div style="margin-bottom:0.5rem;">
+          <label style="font-size:0.73rem;color:var(--muted);display:block;margin-bottom:0.5rem;letter-spacing:0.3px;text-transform:uppercase;font-weight:500;">Or pick a bracket (auto-fills %)</label>
+          <div class="fat-grid">
+            <button type="button" class="fat-btn" data-fat="low" data-val="12">Low fat<span class="fat-range">Men &lt;15% · Women &lt;24%</span></button>
+            <button type="button" class="fat-btn" data-fat="mid" data-val="20">Average<span class="fat-range">Men 15–24% · Women 24–31%</span></button>
+            <button type="button" class="fat-btn" data-fat="high" data-val="30">Higher fat<span class="fat-range">Men &gt;24% · Women &gt;31%</span></button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="form-actions">
-      <button type="submit" class="btn-primary" id="submitBtn">Continue</button>
-      <button type="button" class="btn-ghost" id="skipBtn">Skip for now</button>
+    <div class="global-error" id="globalError2"></div>
+    <div class="actions">
+      <button type="submit" class="btn-primary" id="submitBtn">Save Profile →</button>
+      <a href="dashboard.html" class="btn-ghost">Skip for now</a>
     </div>
   </form>
 </main>
 
+<script src="session-storage.js"></script>
 <script>
-  const PROFILE_STORAGE_KEY = 'safer_user_profile';
+  var PROFILE_KEY = 'safer_user_profile';
 
-  function readStoredProfile() {
-    try {
-      const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
-      if (!raw) return null;
-      const data = JSON.parse(raw);
-      return data && typeof data === 'object' ? data : null;
-    } catch (e) {
-      return null;
-    }
+  function readProfile() {
+    try { var r = localStorage.getItem(PROFILE_KEY); return r ? JSON.parse(r) : null; } catch(e) { return null; }
   }
 
-  function clearFieldErrors() {
-    document.querySelectorAll('.field-error').forEach((el) => {
-      el.textContent = '';
-      el.classList.remove('visible');
-    });
-    document.querySelectorAll('.field.has-error').forEach((el) => el.classList.remove('has-error'));
-    const ge = document.getElementById('globalError');
-    ge.textContent = '';
-    ge.classList.remove('visible');
+  function ageBandToMid(band) {
+    var m = {'21-30':25,'31-40':35,'41-50':45,'51-60':55,'61-70':65,'71+':75};
+    return m[band] || null;
   }
 
-  function setFieldError(fieldName, message) {
-    const wrap = document.querySelector(`[data-field="${fieldName}"]`);
-    if (!wrap) return;
-    wrap.classList.add('has-error');
-    const err = wrap.querySelector('.field-error');
-    if (err) {
-      err.textContent = message;
-      err.classList.add('visible');
-    }
+  function setErr(id, msg) {
+    var el = document.getElementById('err-' + id);
+    var wrap = document.querySelector('[data-field="' + id + '"]');
+    if (el) { el.textContent = msg; el.className = 'field-error' + (msg ? ' visible' : ''); }
+    if (wrap) wrap.classList.toggle('has-error', Boolean(msg));
   }
 
   function validate() {
-    clearFieldErrors();
-    let ok = true;
+    var ok = true;
+    var sex = document.getElementById('sexSelect').value;
+    var ageBand = document.getElementById('ageBandSelect').value;
+    var height = document.getElementById('heightInput').value;
+    var weight = document.getElementById('weightInput').value;
+    var bf = document.getElementById('bodyFatInput').value;
 
-    const sex = document.getElementById('sex').value.trim();
-    const ageBand = document.getElementById('age_band').value.trim();
-    const heightIn = document.getElementById('height_in').value.trim();
-    const weightLbs = document.getElementById('weight_lbs').value.trim();
-    const bodyFatRaw = document.getElementById('body_fat_percent').value.trim();
-    const drinks = document.getElementById('drinks_per_week').value.trim();
+    setErr('sex', sex ? '' : 'Please select a biological sex.');
+    setErr('age_band', ageBand ? '' : 'Please select an age band.');
+    if (!sex) ok = false;
+    if (!ageBand) ok = false;
 
-    if (!sex) { setFieldError('sex', 'Please select an option.'); ok = false; }
-    if (!ageBand) { setFieldError('age_band', 'Please select an age band.'); ok = false; }
-    if (!heightIn) { setFieldError('height_in', 'Height is required.'); ok = false; }
-    else {
-      const h = Number(heightIn);
-      if (!Number.isFinite(h) || h <= 0) { setFieldError('height_in', 'Height must be a positive number.'); ok = false; }
-    }
-    if (!weightLbs) { setFieldError('weight_lbs', 'Weight is required.'); ok = false; }
-    else {
-      const w = Number(weightLbs);
-      if (!Number.isFinite(w) || w <= 0) { setFieldError('weight_lbs', 'Weight must be a positive number.'); ok = false; }
-    }
-    if (!bodyFatRaw) {
-      setFieldError('body_fat_percent', 'Body fat percentage is required.');
-      ok = false;
-    } else {
-      const bf = Number(bodyFatRaw);
-      if (!Number.isFinite(bf)) {
-        setFieldError('body_fat_percent', 'Enter a valid number.');
-        ok = false;
-      } else if (bf < 0 || bf > 60) {
-        setFieldError('body_fat_percent', 'Use a value between 0 and 60.');
-        ok = false;
-      }
-    }
-    if (!drinks) { setFieldError('drinks_per_week', 'This field is required.'); ok = false; }
-    else {
-      const d = Number(drinks);
-      if (!Number.isFinite(d) || d < 0) { setFieldError('drinks_per_week', 'Cannot be negative.'); ok = false; }
-    }
+    if (!height || isNaN(height) || Number(height) <= 0) { setErr('height_in', 'Enter your height in inches (e.g. 70).'); ok = false; }
+    else setErr('height_in', '');
+    if (!weight || isNaN(weight) || Number(weight) <= 0) { setErr('weight_lbs', 'Enter your weight in pounds.'); ok = false; }
+    else setErr('weight_lbs', '');
+    if (!bf || isNaN(bf) || Number(bf) < 3 || Number(bf) > 65) { setErr('body_fat_percent', 'Enter a body fat % between 3 and 65, or use the selector above.'); ok = false; }
+    else setErr('body_fat_percent', '');
 
     return ok;
   }
 
-  function bodyFatFromLegacyCategory(category) {
-    if (!category || typeof category !== 'string') return null;
-    var map = { low: 12, medium: 20, high: 30 };
-    return map[category] != null ? map[category] : null;
-  }
+  document.querySelectorAll('.fat-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.fat-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('bodyFatInput').value = btn.dataset.val;
+      setErr('body_fat_percent', '');
+    });
+  });
 
-  function applyProfileToForm(profile) {
-    if (!profile) return;
-    if (profile.sex) document.getElementById('sex').value = profile.sex;
-    if (profile.age_band) document.getElementById('age_band').value = profile.age_band;
-    if (profile.height_in != null && profile.height_in !== '') document.getElementById('height_in').value = profile.height_in;
-    if (profile.weight_lbs != null && profile.weight_lbs !== '') document.getElementById('weight_lbs').value = profile.weight_lbs;
-    if (profile.body_fat_percent != null && profile.body_fat_percent !== '' && Number.isFinite(Number(profile.body_fat_percent))) {
-      document.getElementById('body_fat_percent').value = profile.body_fat_percent;
-    } else {
-      var migrated = bodyFatFromLegacyCategory(profile.body_fat_category);
-      if (migrated != null) document.getElementById('body_fat_percent').value = migrated;
-    }
-    if (profile.drinks_per_week != null && profile.drinks_per_week !== '') document.getElementById('drinks_per_week').value = profile.drinks_per_week;
-  }
-
-  document.getElementById('profileForm').addEventListener('submit', function (e) {
+  document.getElementById('profileForm').addEventListener('submit', function(e) {
     e.preventDefault();
     if (!validate()) return;
 
-    const now = new Date().toISOString();
-    const existing = readStoredProfile();
+    var name = document.getElementById('nameInput').value.trim();
+    var sex = document.getElementById('sexSelect').value;
+    var ageBand = document.getElementById('ageBandSelect').value;
+    var dpw = parseFloat(document.getElementById('dpwInput').value) || 0;
+    var heightIn = parseFloat(document.getElementById('heightInput').value);
+    var weightLbs = parseFloat(document.getElementById('weightInput').value);
+    var bf = parseFloat(document.getElementById('bodyFatInput').value);
+    var now = new Date().toISOString();
+    var existing = readProfile();
 
-    const payload = {
+    var payload = {
       schema_version: 1,
-      profile_completed: true,
-      sex: document.getElementById('sex').value,
-      age_band: document.getElementById('age_band').value,
-      height_in: Number(document.getElementById('height_in').value),
-      weight_lbs: Number(document.getElementById('weight_lbs').value),
-      body_fat_percent: Number(document.getElementById('body_fat_percent').value),
-      drinks_per_week: Number(document.getElementById('drinks_per_week').value),
-      created_at: existing && existing.created_at ? existing.created_at : now,
+      name: name,
+      sex: sex,
+      age_band: ageBand,
+      age_years: ageBandToMid(ageBand),
+      height_in: heightIn,
+      weight_lbs: weightLbs,
+      body_fat_percent: bf,
+      drinks_per_week: dpw,
+      created_at: (existing && existing.created_at) ? existing.created_at : now,
       updated_at: now
     };
 
     try {
-      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(payload));
-    } catch (err) {
-      const ge = document.getElementById('globalError');
-      ge.textContent = 'Could not save on this device (storage may be full or disabled).';
-      ge.classList.add('visible');
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(payload));
+    } catch(err) {
+      document.getElementById('globalError').textContent = 'Could not save (storage may be full or disabled).';
+      document.getElementById('globalError').classList.add('visible');
       return;
     }
 
-    window.location.href = 'dashboard.html';
+    document.getElementById('newUserBanner').style.display = 'none';
+    document.getElementById('savedBanner').style.display = 'flex';
+    window.scrollTo({top: 0, behavior: 'smooth'});
+    updateSidebarAvatar(payload);
   });
 
-  document.getElementById('skipBtn').addEventListener('click', function () {
-    window.location.href = 'dashboard.html';
-  });
+  function updateSidebarAvatar(profile) {
+    var name = profile && profile.name ? profile.name : '';
+    var initials = name ? name.trim()[0].toUpperCase() : (profile && profile.sex === 'male' ? 'M' : profile && profile.sex === 'female' ? 'F' : '?');
+    var el = document.getElementById('avatarInitials');
+    var nm = document.getElementById('sidebarName');
+    if (el) el.textContent = initials;
+    if (nm) nm.textContent = name || 'My Profile';
+  }
 
-  (function init() {
-    const existing = readStoredProfile();
-    const submitBtn = document.getElementById('submitBtn');
-    const note = document.getElementById('updateNote');
-
-    if (existing) {
-      applyProfileToForm(existing);
-      submitBtn.textContent = 'Save profile';
-      note.hidden = false;
-    } else {
-      submitBtn.textContent = 'Continue';
+  function prefillFromStored() {
+    var p = readProfile();
+    if (!p) return;
+    document.getElementById('newUserBanner').style.display = 'none';
+    if (p.name) document.getElementById('nameInput').value = p.name;
+    if (p.sex) document.getElementById('sexSelect').value = p.sex;
+    if (p.age_band) document.getElementById('ageBandSelect').value = p.age_band;
+    if (p.height_in) document.getElementById('heightInput').value = p.height_in;
+    if (p.weight_lbs) document.getElementById('weightInput').value = p.weight_lbs;
+    if (p.body_fat_percent) document.getElementById('bodyFatInput').value = p.body_fat_percent;
+    if (p.drinks_per_week) document.getElementById('dpwInput').value = p.drinks_per_week;
+    document.getElementById('submitBtn').textContent = 'Update Profile →';
+    // highlight fat bracket if matches
+    var bf = p.body_fat_percent;
+    if (bf) {
+      var bracket = bf < 15 ? 'low' : bf <= 25 ? 'mid' : 'high';
+      document.querySelectorAll('.fat-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.fat === bracket);
+      });
     }
-  })();
+    updateSidebarAvatar(p);
+  }
+
+  prefillFromStored();
 </script>
 </body>
 </html>
