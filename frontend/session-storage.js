@@ -1,24 +1,25 @@
 /**
- * Session list persistence (separate from profile: safer_user_profile).
- * Active working draft is tracked via safer_active_session_id.
+ * SaferSessionStorage — session list + profile persistence.
+ * Keys: safer_sessions, safer_active_session_id, safer_user_profile
  */
 (function (global) {
   var STORAGE_KEY = 'safer_sessions';
-  var ACTIVE_KEY = 'safer_active_session_id';
+  var ACTIVE_KEY  = 'safer_active_session_id';
+  var PROFILE_KEY = 'safer_user_profile';
 
-  function genSessionId() {
-    if (global.crypto && typeof global.crypto.randomUUID === 'function') {
-      return global.crypto.randomUUID();
-    }
-    return 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+  /* ── ID generators ── */
+  function genId(prefix) {
+    if (global.crypto && typeof global.crypto.randomUUID === 'function') return global.crypto.randomUUID();
+    return (prefix || 'id') + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
   }
 
+  /* ── Default shapes ── */
   function defaultSessionShape() {
     var now = new Date().toISOString();
     return {
       schema_version: 1,
-      session_id: genSessionId(),
-      title: 'Drinking session - ' + new Date().toLocaleString(),
+      session_id: genId('sess'),
+      title: 'Drinking session — ' + new Date().toLocaleString(),
       user_id: null,
       status: 'draft',
       started_at: now,
@@ -27,164 +28,80 @@
       events: [],
       review_status: 'pending',
       post_session_review: null,
-      inputs: {
-        drinks: 0,
-        drink_type: 'standard',
-        hours_elapsed: 0,
-        food_intake: 'unknown',
-        hydration: 'unknown',
-        sleep: 'unknown',
-        fasting: 'unknown'
-      },
-      feedback: {
-        perceived_intoxication: null,
-        hangover_severity: null,
-        blackout: null,
-        vomiting: null
-      }
+      prediction_snapshot: null,
+      inputs: { drinks: 0, drink_type: 'standard', hours_elapsed: 0, food_intake: 'unknown', hydration: 'unknown', sleep: 'unknown', fasting: 'unknown' },
+      feedback: { perceived_intoxication: null, hangover_severity: null, blackout: null, vomiting: null }
     };
   }
 
-  function ensureSessionShape(session) {
-    if (!session || typeof session !== 'object') return defaultSessionShape();
-    if (!Array.isArray(session.events)) session.events = [];
-    if (!session.title) session.title = 'Drinking session - ' + new Date(session.started_at || Date.now()).toLocaleString();
-    if (!session.review_status) session.review_status = 'pending';
-    if (session.post_session_review && typeof session.post_session_review !== 'object') {
-      session.post_session_review = null;
-    }
-    if (session.post_session_review) {
-      session.review_status = 'completed';
-    } else if (session.status === 'completed') {
-      session.review_status = 'pending';
-    }
-    if (!session.inputs || typeof session.inputs !== 'object') session.inputs = defaultSessionShape().inputs;
-    if (!session.feedback || typeof session.feedback !== 'object') session.feedback = defaultSessionShape().feedback;
-    if (session.schema_version == null) session.schema_version = 1;
-    return session;
+  function ensureSessionShape(s) {
+    if (!s || typeof s !== 'object') return defaultSessionShape();
+    if (!Array.isArray(s.events)) s.events = [];
+    if (!s.title) s.title = 'Drinking session — ' + new Date(s.started_at || Date.now()).toLocaleString();
+    if (!s.review_status) s.review_status = 'pending';
+    if (s.post_session_review && typeof s.post_session_review !== 'object') s.post_session_review = null;
+    if (s.post_session_review) s.review_status = 'completed';
+    else if (s.status === 'completed') s.review_status = 'pending';
+    if (!s.inputs || typeof s.inputs !== 'object') s.inputs = defaultSessionShape().inputs;
+    if (!s.feedback || typeof s.feedback !== 'object') s.feedback = defaultSessionShape().feedback;
+    if (s.schema_version == null) s.schema_version = 1;
+    return s;
   }
 
-  function isReviewPending(session) {
-    session = ensureSessionShape(session);
-    return session.status === 'completed' &&
-      session.review_status !== 'completed' &&
-      !session.post_session_review;
-  }
-
-  function deepMergeInputsFeedback(base, overrides) {
-    if (!overrides || typeof overrides !== 'object') return base;
-    if (overrides.inputs && typeof overrides.inputs === 'object') {
-      Object.assign(base.inputs, overrides.inputs);
-    }
-    if (overrides.feedback && typeof overrides.feedback === 'object') {
-      Object.assign(base.feedback, overrides.feedback);
-    }
-    return base;
-  }
-
+  /* ── Storage helpers ── */
   function getSessions() {
     try {
       var raw = global.localStorage.getItem(STORAGE_KEY);
       if (!raw) return [];
       var parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed.map(function (s) { return ensureSessionShape(s); });
-    } catch (e) {
-      return [];
-    }
+      return Array.isArray(parsed) ? parsed.map(ensureSessionShape) : [];
+    } catch (e) { return []; }
   }
 
   function saveSessions(sessions) {
-    if (!Array.isArray(sessions)) {
-      throw new TypeError('saveSessions expects an array');
-    }
     global.localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
   }
 
-  /**
-   * Creates a new draft session, appends it, sets it as the active draft, and returns it.
-   * Optional partial may include inputs / feedback objects to merge.
-   */
-  function createSession(partial) {
-    var base = defaultSessionShape();
-    deepMergeInputsFeedback(base, partial);
-    if (partial && typeof partial === 'object') {
-      if (partial.title) base.title = String(partial.title);
-      if (Array.isArray(partial.events)) base.events = partial.events.slice();
-      if (partial.review_status) base.review_status = String(partial.review_status);
-      if (partial.post_session_review && typeof partial.post_session_review === 'object') {
-        base.post_session_review = normalizePostSessionReview(partial.post_session_review);
-        base.review_status = 'completed';
-      }
-    }
-    base.updated_at = base.started_at;
-    var all = getSessions();
-    all.push(base);
-    saveSessions(all);
-    try {
-      global.localStorage.setItem(ACTIVE_KEY, base.session_id);
-    } catch (e2) { /* ignore */ }
-    return base;
+  function getSessionById(id) {
+    if (!id) return null;
+    return getSessions().find(function(s) { return s.session_id === id; }) || null;
   }
 
-  function getSessionById(sessionId) {
-    if (!sessionId) return null;
-    var all = getSessions();
-    for (var i = 0; i < all.length; i++) {
-      if (all[i].session_id === sessionId) return all[i];
-    }
-    return null;
-  }
-
-  /** Replace one session in the array by session_id. */
   function updateSession(updated) {
     ensureSessionShape(updated);
     var all = getSessions();
-    var idx = -1;
-    for (var i = 0; i < all.length; i++) {
-      if (all[i].session_id === updated.session_id) {
-        idx = i;
-        break;
-      }
-    }
+    var idx = all.findIndex(function(s) { return s.session_id === updated.session_id; });
     if (idx === -1) return false;
     all[idx] = updated;
     saveSessions(all);
     return true;
   }
 
-  function deleteSession(sessionId) {
-    if (!sessionId) {
-      return { deleted: false, session_id: null, was_active: false };
+  function createSession(partial) {
+    var base = defaultSessionShape();
+    if (partial && typeof partial === 'object') {
+      if (partial.title) base.title = String(partial.title);
+      if (Array.isArray(partial.events)) base.events = partial.events.slice();
     }
+    base.updated_at = base.started_at;
     var all = getSessions();
-    var kept = [];
-    var deleted = null;
-    for (var i = 0; i < all.length; i++) {
-      if (all[i].session_id === sessionId) {
-        deleted = all[i];
-      } else {
-        kept.push(all[i]);
-      }
-    }
-    if (!deleted) {
-      return { deleted: false, session_id: sessionId, was_active: false };
-    }
+    all.push(base);
+    saveSessions(all);
+    try { global.localStorage.setItem(ACTIVE_KEY, base.session_id); } catch(e) {}
+    return base;
+  }
 
+  function deleteSession(id) {
+    if (!id) return { deleted: false };
+    var all = getSessions();
+    var kept = [], deleted = null;
+    all.forEach(function(s) { if (s.session_id === id) deleted = s; else kept.push(s); });
+    if (!deleted) return { deleted: false };
     var wasActive = false;
-    try {
-      wasActive = global.localStorage.getItem(ACTIVE_KEY) === sessionId;
-    } catch (e) { /* ignore */ }
-
+    try { wasActive = global.localStorage.getItem(ACTIVE_KEY) === id; } catch(e) {}
     saveSessions(kept);
-    if (wasActive) clearActiveDraftSessionId();
-
-    return {
-      deleted: true,
-      session_id: sessionId,
-      was_active: wasActive,
-      deleted_session: deleted
-    };
+    if (wasActive) { try { global.localStorage.removeItem(ACTIVE_KEY); } catch(e) {} }
+    return { deleted: true, session_id: id, was_active: wasActive };
   }
 
   function getActiveDraftSession() {
@@ -195,33 +112,20 @@
       if (s && s.status === 'draft') return s;
       global.localStorage.removeItem(ACTIVE_KEY);
       return null;
-    } catch (e) {
-      return null;
-    }
+    } catch(e) { return null; }
   }
 
-  function setActiveDraftSessionId(sessionId) {
-    if (sessionId) global.localStorage.setItem(ACTIVE_KEY, sessionId);
-    else global.localStorage.removeItem(ACTIVE_KEY);
+  function setActiveDraftSessionId(id) {
+    if (id) global.localStorage.setItem(ACTIVE_KEY, id);
+    else { try { global.localStorage.removeItem(ACTIVE_KEY); } catch(e) {} }
   }
 
   function clearActiveDraftSessionId() {
-    try {
-      global.localStorage.removeItem(ACTIVE_KEY);
-    } catch (e) { /* ignore */ }
+    try { global.localStorage.removeItem(ACTIVE_KEY); } catch(e) {}
   }
 
   function getOrCreateActiveDraftSession(partial) {
-    var active = getActiveDraftSession();
-    if (active) return active;
-    return createSession(partial || {});
-  }
-
-  function genEventId() {
-    if (global.crypto && typeof global.crypto.randomUUID === 'function') {
-      return global.crypto.randomUUID();
-    }
-    return 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+    return getActiveDraftSession() || createSession(partial || {});
   }
 
   function addEventToSession(sessionId, event) {
@@ -229,17 +133,9 @@
     var session = getSessionById(sessionId);
     if (!session) return null;
     ensureSessionShape(session);
-    var nowIso = new Date().toISOString();
-    var evt = Object.assign(
-      {
-        event_id: genEventId(),
-        event_type: 'other',
-        timestamp: nowIso,
-      },
-      event || {}
-    );
-    session.events.push(evt);
-    session.updated_at = nowIso;
+    var now = new Date().toISOString();
+    session.events.push(Object.assign({ event_id: genId('evt'), event_type: 'other', timestamp: now }, event || {}));
+    session.updated_at = now;
     updateSession(session);
     return session;
   }
@@ -249,36 +145,43 @@
     var session = getSessionById(sessionId);
     if (!session) return null;
     ensureSessionShape(session);
-    var nowIso = new Date().toISOString();
+    var now = new Date().toISOString();
     session.status = 'completed';
-    if (!session.post_session_review) session.review_status = 'pending';
-    session.ended_at = nowIso;
-    session.updated_at = nowIso;
+    session.review_status = session.post_session_review ? 'completed' : 'pending';
+    session.ended_at = now;
+    session.updated_at = now;
     updateSession(session);
     clearActiveDraftSessionId();
     return session;
   }
 
-  function clampInt(value, lower, upper, fallback) {
-    var n = parseInt(value, 10);
-    if (!Number.isFinite(n)) n = fallback;
-    return Math.max(lower, Math.min(upper, n));
+  function isReviewPending(s) {
+    s = ensureSessionShape(s);
+    return s.status === 'completed' && s.review_status !== 'completed' && !s.post_session_review;
   }
 
-  function optionalNumber(value) {
-    if (value === '' || value == null) return null;
-    var n = Number(value);
+  function getSessionsPendingReview() {
+    return getSessions().filter(isReviewPending);
+  }
+
+  /* ── Normalize post-session review ── */
+  function clampInt(v, lo, hi, fallback) {
+    var n = parseInt(v, 10);
+    return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : fallback;
+  }
+  function optNum(v) {
+    if (v === '' || v == null) return null;
+    var n = Number(v);
     return Number.isFinite(n) && n >= 0 ? n : null;
   }
-
-  function normalizeHydration(value) {
-    var allowed = { unknown: true, low: true, normal: true, high: true };
-    var v = String(value || 'unknown').toLowerCase();
-    return allowed[v] ? v : 'unknown';
+  function normHydration(v) {
+    var allowed = { unknown:1, low:1, normal:1, high:1 };
+    var s = String(v || 'unknown').toLowerCase();
+    return allowed[s] ? s : 'unknown';
   }
 
-  function normalizePostSessionReview(review) {
-    var raw = review && typeof review === 'object' ? review : {};
+  function normalizePostSessionReview(raw) {
+    raw = (raw && typeof raw === 'object') ? raw : {};
     return {
       submitted_at: raw.submitted_at || new Date().toISOString(),
       hangover_severity: clampInt(raw.hangover_severity, 0, 5, 0),
@@ -286,42 +189,20 @@
       vomited: raw.vomited === true,
       blackout: raw.blackout === true,
       memory_gap: raw.memory_gap === true,
+      felt_sober_hours: optNum(raw.felt_sober_hours),   // numeric now
       felt_sober_time: String(raw.felt_sober_time || '').trim(),
-      sleep_hours_after: optionalNumber(raw.sleep_hours_after),
-      hydration_after: normalizeHydration(raw.hydration_after),
-      notes: String(raw.notes || '').trim()
+      sleep_hours_after: optNum(raw.sleep_hours_after),
+      hydration_after: normHydration(raw.hydration_after),
+      notes: String(raw.notes || '').trim(),
+      implied_beta: (typeof raw.implied_beta === 'number') ? raw.implied_beta : null
     };
-  }
-
-  function getSessionsPendingReview() {
-    return getSessions().filter(function (session) {
-      return isReviewPending(session);
-    });
-  }
-
-  function markReviewCompleted(sessionId) {
-    if (!sessionId) return null;
-    var session = getSessionById(sessionId);
-    if (!session) return null;
-    ensureSessionShape(session);
-    if (!session.post_session_review) return session;
-    var nowIso = new Date().toISOString();
-    session.review_status = 'completed';
-    session.updated_at = nowIso;
-    updateSession(session);
-    return session;
   }
 
   function savePostSessionReview(sessionId, review) {
     if (!sessionId) return null;
     var session = getSessionById(sessionId);
-    if (!session) return null;
+    if (!session || session.status !== 'completed') return null;
     ensureSessionShape(session);
-    if (session.status !== 'completed') return null;
-
-    // Post-session review is subjective feedback, not a direct BAC measurement.
-    // It is stored for future personalization or impairment-risk calibration,
-    // and it must not currently modify BAC predictions, r, or beta.
     session.post_session_review = normalizePostSessionReview(review);
     session.review_status = 'completed';
     session.updated_at = session.post_session_review.submitted_at;
@@ -329,9 +210,44 @@
     return session;
   }
 
+  function markReviewCompleted(sessionId) {
+    var session = getSessionById(sessionId);
+    if (!session) return null;
+    session.review_status = 'completed';
+    session.updated_at = new Date().toISOString();
+    updateSession(session);
+    return session;
+  }
+
+  /* ── Profile helpers ── */
+  function getProfile() {
+    try {
+      var raw = global.localStorage.getItem(PROFILE_KEY);
+      if (!raw) return null;
+      var d = JSON.parse(raw);
+      return d && typeof d === 'object' ? d : null;
+    } catch(e) { return null; }
+  }
+
+  function saveProfile(profile) {
+    global.localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  }
+
+  /* ── Implied beta helpers ── */
+  function getAllImpliedBetas() {
+    return getSessions().reduce(function(acc, s) {
+      if (s.post_session_review && typeof s.post_session_review.implied_beta === 'number') {
+        acc.push(s.post_session_review.implied_beta);
+      }
+      return acc;
+    }, []);
+  }
+
+  /* ── Export ── */
   global.SaferSessionStorage = {
     STORAGE_KEY: STORAGE_KEY,
     ACTIVE_SESSION_KEY: ACTIVE_KEY,
+    PROFILE_KEY: PROFILE_KEY,
     getSessions: getSessions,
     saveSessions: saveSessions,
     createSession: createSession,
@@ -347,6 +263,9 @@
     isReviewPending: isReviewPending,
     getSessionsPendingReview: getSessionsPendingReview,
     savePostSessionReview: savePostSessionReview,
-    markReviewCompleted: markReviewCompleted
+    markReviewCompleted: markReviewCompleted,
+    getProfile: getProfile,
+    saveProfile: saveProfile,
+    getAllImpliedBetas: getAllImpliedBetas,
   };
 })(typeof window !== 'undefined' ? window : this);
