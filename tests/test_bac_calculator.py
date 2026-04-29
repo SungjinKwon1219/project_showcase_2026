@@ -7,7 +7,9 @@ from BACCalculator import (
     MIN_R,
     calculate_bac,
     calculate_bac_range,
+    event_aware_bac_at_time,
     estimate_beta,
+    generate_event_aware_bac_curve,
     r_coefficient,
 )
 
@@ -75,6 +77,95 @@ class BACCalculatorTests(unittest.TestCase):
         )
         self.assertLessEqual(result["low"], result["estimate"])
         self.assertLessEqual(result["estimate"], result["high"])
+
+    def test_event_aware_bac_zero_before_first_drink(self) -> None:
+        bac = event_aware_bac_at_time(
+            [{"grams_alcohol": 14, "hours_from_session_start": 1.0}],
+            t=0.5,
+            weight_kg=70.0,
+            r=0.6,
+            beta_per_hour=0.015,
+        )
+        self.assertEqual(bac, 0.0)
+
+    def test_event_aware_bac_respects_drink_timing(self) -> None:
+        first_only = event_aware_bac_at_time(
+            [{"grams_alcohol": 14, "hours_from_session_start": 0.0}],
+            t=1.0,
+            weight_kg=70.0,
+            r=0.6,
+            beta_per_hour=0.015,
+        )
+        with_late_drink = event_aware_bac_at_time(
+            [
+                {"grams_alcohol": 14, "hours_from_session_start": 0.0},
+                {"grams_alcohol": 28, "hours_from_session_start": 2.0},
+            ],
+            t=1.0,
+            weight_kg=70.0,
+            r=0.6,
+            beta_per_hour=0.015,
+        )
+        self.assertAlmostEqual(first_only, with_late_drink, places=6)
+
+    def test_event_aware_bac_differs_from_all_at_start_for_late_drink(self) -> None:
+        event_aware = event_aware_bac_at_time(
+            [
+                {"grams_alcohol": 14, "hours_from_session_start": 0.0},
+                {"grams_alcohol": 28, "hours_from_session_start": 2.0},
+            ],
+            t=1.0,
+            weight_kg=70.0,
+            r=0.6,
+            beta_per_hour=0.015,
+        )
+        all_at_start = calculate_bac(
+            alc_g=28.0,
+            weight_kg=70.0,
+            r=0.6,
+            beta_per_hour=0.015,
+            hours_elapsed=1.0,
+        )
+        self.assertLess(event_aware, all_at_start)
+
+    def test_event_aware_curve_contains_sorted_nonnegative_points(self) -> None:
+        result = generate_event_aware_bac_curve(
+            [
+                {"grams_alcohol": 14, "hours_from_session_start": 0.0},
+                {"grams_alcohol": 14, "hours_from_session_start": 1.0},
+            ],
+            weight_kg=70.0,
+            r=0.6,
+            beta_per_hour=0.015,
+            current_time_hours=1.0,
+        )
+        curve = result["curve"]
+        self.assertGreater(len(curve), 0)
+        self.assertEqual(result["metadata"]["source"], "event_aware")
+        self.assertEqual([p["hour"] for p in curve], sorted(p["hour"] for p in curve))
+        self.assertTrue(all(p["estimate"] >= 0 for p in curve))
+
+    def test_event_aware_curve_reports_peak_from_curve(self) -> None:
+        result = generate_event_aware_bac_curve(
+            [
+                {"grams_alcohol": 14, "hours_from_session_start": 0.0},
+                {"grams_alcohol": 28, "hours_from_session_start": 2.0},
+            ],
+            weight_kg=70.0,
+            r=0.6,
+            beta_per_hour=0.015,
+            current_time_hours=1.0,
+        )
+        peak_from_points = max(point["estimate"] for point in result["curve"])
+        self.assertAlmostEqual(result["peak_bac"], peak_from_points, places=6)
+        self.assertEqual(result["peak_status"], "future")
+        self.assertGreater(result["time_to_peak_hours"], 0)
+
+    def test_food_intake_changes_event_aware_curve(self) -> None:
+        events = [{"grams_alcohol": 14, "hours_from_session_start": 0.0}]
+        no_food = event_aware_bac_at_time(events, 0.25, 70.0, 0.6, 0.015, food_intake="none")
+        high_food = event_aware_bac_at_time(events, 0.25, 70.0, 0.6, 0.015, food_intake="high")
+        self.assertLess(high_food, no_food)
 
 
 if __name__ == "__main__":

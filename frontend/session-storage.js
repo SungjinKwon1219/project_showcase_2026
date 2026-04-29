@@ -17,7 +17,7 @@
   function defaultSessionShape() {
     var now = new Date().toISOString();
     return {
-      schema_version: 1,
+      schema_version: 2,
       session_id: genId('sess'),
       title: 'Drinking session — ' + new Date().toLocaleString(),
       user_id: null,
@@ -29,14 +29,46 @@
       review_status: 'pending',
       post_session_review: null,
       prediction_snapshot: null,
+      prediction_snapshots: [],
+      profile_snapshot: null,
       inputs: { drinks: 0, drink_type: 'standard', hours_elapsed: 0, food_intake: 'unknown', hydration: 'unknown', sleep: 'unknown', fasting: 'unknown' },
       feedback: { perceived_intoxication: null, hangover_severity: null, blackout: null, vomiting: null }
     };
   }
 
+  function finiteNumber(v) {
+    var n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function hoursFromStart(session, timestamp) {
+    var start = new Date(session.started_at || Date.now()).getTime();
+    var eventTime = new Date(timestamp || Date.now()).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(eventTime)) return 0;
+    return Math.max(0, (eventTime - start) / 3600000);
+  }
+
+  function normalizeDrinkEvent(session, e) {
+    if (!e || e.event_type !== 'drink') return e;
+    var timestamp = e.timestamp || new Date().toISOString();
+    if (!e.timestamp) e.timestamp = timestamp;
+    if (finiteNumber(e.hours_from_session_start) == null) {
+      e.hours_from_session_start = Number(hoursFromStart(session, timestamp).toFixed(4));
+    }
+    if (finiteNumber(e.grams_alcohol) == null && finiteNumber(e.standard_drinks) != null) {
+      e.grams_alcohol = finiteNumber(e.standard_drinks) * 14;
+    }
+    if (finiteNumber(e.standard_drinks) == null && finiteNumber(e.grams_alcohol) != null) {
+      e.standard_drinks = finiteNumber(e.grams_alcohol) / 14;
+    }
+    if (!e.label) e.label = (finiteNumber(e.standard_drinks) || 0).toFixed(2) + ' standard drinks';
+    return e;
+  }
+
   function ensureSessionShape(s) {
     if (!s || typeof s !== 'object') return defaultSessionShape();
     if (!Array.isArray(s.events)) s.events = [];
+    s.events = s.events.map(function(e) { return normalizeDrinkEvent(s, e); });
     if (!s.title) s.title = 'Drinking session — ' + new Date(s.started_at || Date.now()).toLocaleString();
     if (!s.review_status) s.review_status = 'pending';
     if (s.post_session_review && typeof s.post_session_review !== 'object') s.post_session_review = null;
@@ -44,7 +76,13 @@
     else if (s.status === 'completed') s.review_status = 'pending';
     if (!s.inputs || typeof s.inputs !== 'object') s.inputs = defaultSessionShape().inputs;
     if (!s.feedback || typeof s.feedback !== 'object') s.feedback = defaultSessionShape().feedback;
-    if (s.schema_version == null) s.schema_version = 1;
+    if (!Array.isArray(s.prediction_snapshots)) s.prediction_snapshots = [];
+    if (s.prediction_snapshot && s.prediction_snapshots.length === 0) {
+      s.prediction_snapshots.push(s.prediction_snapshot);
+    }
+    if (s.profile_snapshot && typeof s.profile_snapshot !== 'object') s.profile_snapshot = null;
+    if (s.profile_snapshot == null) s.profile_snapshot = null;
+    s.schema_version = Math.max(Number(s.schema_version) || 1, 2);
     return s;
   }
 
@@ -134,7 +172,11 @@
     if (!session) return null;
     ensureSessionShape(session);
     var now = new Date().toISOString();
-    session.events.push(Object.assign({ event_id: genId('evt'), event_type: 'other', timestamp: now }, event || {}));
+    var nextEvent = Object.assign({ event_id: genId('evt'), event_type: 'other', timestamp: now }, event || {});
+    if (nextEvent.event_type === 'drink' && finiteNumber(nextEvent.hours_from_session_start) == null) {
+      nextEvent.hours_from_session_start = Number(hoursFromStart(session, nextEvent.timestamp).toFixed(4));
+    }
+    session.events.push(normalizeDrinkEvent(session, nextEvent));
     session.updated_at = now;
     updateSession(session);
     return session;
@@ -179,9 +221,29 @@
     var s = String(v || 'unknown').toLowerCase();
     return allowed[s] ? s : 'unknown';
   }
+  function normFood(v) {
+    var allowed = { none:1, low:1, medium:1, mid:1, high:1 };
+    var s = String(v || 'none').toLowerCase();
+    if (s === 'mid') return 'medium';
+    return allowed[s] ? s : 'none';
+  }
+  function normalizeImpliedBetaResult(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    var beta = finiteNumber(raw.implied_beta);
+    return Object.assign({}, raw, {
+      implied_beta: beta,
+      usable_for_personalization: raw.usable_for_personalization === true,
+      confidence: finiteNumber(raw.confidence),
+      validity_flags: Array.isArray(raw.validity_flags) ? raw.validity_flags.slice() : [],
+      warnings: Array.isArray(raw.warnings) ? raw.warnings.slice() : []
+    });
+  }
 
   function normalizePostSessionReview(raw) {
     raw = (raw && typeof raw === 'object') ? raw : {};
+    var impliedResult = normalizeImpliedBetaResult(raw.implied_beta_result);
+    var legacyBeta = finiteNumber(raw.implied_beta);
+    if (legacyBeta == null && impliedResult && impliedResult.implied_beta != null) legacyBeta = impliedResult.implied_beta;
     return {
       submitted_at: raw.submitted_at || new Date().toISOString(),
       hangover_severity: clampInt(raw.hangover_severity, 0, 5, 0),
@@ -191,10 +253,13 @@
       memory_gap: raw.memory_gap === true,
       felt_sober_hours: optNum(raw.felt_sober_hours),   // numeric now
       felt_sober_time: String(raw.felt_sober_time || '').trim(),
+      food_intake: normFood(raw.food_intake),
+      final_bac_anchor: optNum(raw.final_bac_anchor) == null ? 0.02 : optNum(raw.final_bac_anchor),
       sleep_hours_after: optNum(raw.sleep_hours_after),
       hydration_after: normHydration(raw.hydration_after),
       notes: String(raw.notes || '').trim(),
-      implied_beta: (typeof raw.implied_beta === 'number') ? raw.implied_beta : null
+      implied_beta: legacyBeta,
+      implied_beta_result: impliedResult
     };
   }
 
@@ -234,10 +299,36 @@
   }
 
   /* ── Implied beta helpers ── */
+  function isPlausibleBeta(v) {
+    return typeof v === 'number' && Number.isFinite(v) && v >= 0.005 && v <= 0.030;
+  }
+
   function getAllImpliedBetas() {
+    var seen = {};
     return getSessions().reduce(function(acc, s) {
-      if (s.post_session_review && typeof s.post_session_review.implied_beta === 'number') {
-        acc.push(s.post_session_review.implied_beta);
+      if (!s || seen[s.session_id]) return acc;
+      if (s.status !== 'completed' && s.status !== 'reviewed') return acc;
+      var review = s.post_session_review;
+      if (!review) return acc;
+
+      var result = review.implied_beta_result;
+      if (result && result.usable_for_personalization === true && isPlausibleBeta(result.implied_beta)) {
+        acc.push(Object.assign({}, result, {
+          source_session_id: s.session_id
+        }));
+        seen[s.session_id] = true;
+        return acc;
+      }
+
+      if (isPlausibleBeta(review.implied_beta) && !review.vomited && !review.blackout) {
+        acc.push({
+          implied_beta: review.implied_beta,
+          usable_for_personalization: true,
+          confidence: null,
+          source_session_id: s.session_id,
+          legacy: true
+        });
+        seen[s.session_id] = true;
       }
       return acc;
     }, []);
