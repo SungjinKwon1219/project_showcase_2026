@@ -322,16 +322,16 @@
                 <stop offset="100%" stop-color="#C8F04D" stop-opacity="0"/>
               </linearGradient>
             </defs>
-            <rect x="0" y="10" width="520" height="105" fill="rgba(255,107,107,0.13)"/>
-            <rect x="0" y="115" width="520" height="70" fill="rgba(255,179,71,0.11)"/>
-            <rect x="0" y="185" width="520" height="49" fill="rgba(255,179,71,0.07)"/>
-            <rect x="0" y="234" width="520" height="56" fill="rgba(200,240,77,0.055)"/>
+            <rect id="bandHeavy" x="0" y="10" width="520" height="105" fill="rgba(255,107,107,0.13)"/>
+            <rect id="bandIntoxication" x="0" y="115" width="520" height="70" fill="rgba(255,179,71,0.11)"/>
+            <rect id="bandMild" x="0" y="185" width="520" height="49" fill="rgba(255,179,71,0.07)"/>
+            <rect id="bandLower" x="0" y="234" width="520" height="56" fill="rgba(200,240,77,0.055)"/>
             <line x1="0" y1="10" x2="520" y2="10" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
             <line x1="0" y1="115" x2="520" y2="115" stroke="rgba(255,255,255,0.055)" stroke-width="1"/>
             <line x1="0" y1="185" x2="520" y2="185" stroke="rgba(255,255,255,0.055)" stroke-width="1"/>
-            <line x1="0" y1="234" x2="520" y2="234" stroke="rgba(255,107,107,0.45)" stroke-width="1.2" stroke-dasharray="5,4"/>
+            <line id="thresholdLine008" x1="0" y1="234" x2="520" y2="234" stroke="rgba(255,107,107,0.45)" stroke-width="1.2" stroke-dasharray="5,4"/>
             <line x1="0" y1="290" x2="520" y2="290" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
-            <text x="470" y="231" text-anchor="end" font-size="9" fill="rgba(255,107,107,0.72)" font-family="DM Sans">0.08</text>
+            <text id="thresholdLabel008" x="470" y="231" text-anchor="end" font-size="9" fill="rgba(255,107,107,0.72)" font-family="DM Sans">0.08</text>
             <path id="curveArea" d="M0 300 L520 300 Z" fill="url(#curveGrad)"/>
             <path id="curveLine" d="M0 300 L520 300" fill="none" stroke="#C8F04D" stroke-width="3" stroke-linecap="round"/>
             <circle id="peakDotRing" cx="0" cy="300" r="8" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.38)" stroke-width="1" visibility="hidden"/>
@@ -348,7 +348,7 @@
         <p style="font-size:0.69rem;color:var(--muted-mid);line-height:1.45;margin:0 0 0.75rem;">BAC ranges are estimates for visualization only. They do not determine legal or medical sobriety or whether any activity is safe.</p>
         <div class="zone-legend" aria-label="BAC estimate band legend">
           <div class="zone-card" data-bac-zone="lower">
-            <div class="zone-head"><span class="zone-swatch" style="background:rgba(200,240,77,0.55);"></span><span class="zone-name">Lower estimate range</span></div>
+            <div class="zone-head"><span class="zone-swatch" style="background:rgba(200,240,77,0.55);"></span><span class="zone-name">Lower BAC range</span></div>
             <div class="zone-range">0.00–0.08 BAC</div>
             <div class="zone-symptoms">mild relaxation · mood lift · slower reactions</div>
             <div class="zone-current-badge">Current level</div>
@@ -777,7 +777,8 @@ function curveSignatureFromPayload(payload) {
     standard_drinks: payload.session.standard_drinks,
     drink_events: payload.session.drink_events || [],
     food_intake: payload.session.food_intake || null,
-    history: payload.history || null
+    history: payload.history || null,
+    personalization_settings: payload.personalization_settings || null
   });
 }
 
@@ -809,6 +810,48 @@ function bacZoneForValue(value) {
   return 'heavy';
 }
 
+function graphYForBac(bacValue, maxBac, svgHeight) {
+  var bac = Number.isFinite(Number(bacValue)) ? Number(bacValue) : 0;
+  var max = Number.isFinite(Number(maxBac)) && Number(maxBac) > 0 ? Number(maxBac) : 0.40;
+  var h = Number.isFinite(Number(svgHeight)) && Number(svgHeight) > 20 ? Number(svgHeight) : 300;
+  var topY = 10;
+  var bottomY = h - 10;
+  var normalized = Math.min(1, Math.max(0, bac / max));
+  return bottomY - normalized * (bottomY - topY);
+}
+
+function applyGraphBands(maxBac) {
+  var lowerTopY = graphYForBac(0.08, maxBac, 300);
+  var mildTopY = graphYForBac(0.15, maxBac, 300);
+  var intoxTopY = graphYForBac(0.25, maxBac, 300);
+  var topY = 10;
+  var bottomY = 290;
+
+  function setBandRect(id, y1, y2) {
+    var rect = document.getElementById(id);
+    if (!rect) return;
+    var yTop = Math.max(topY, Math.min(bottomY, Math.min(y1, y2)));
+    var yBottom = Math.max(topY, Math.min(bottomY, Math.max(y1, y2)));
+    rect.setAttribute('y', yTop);
+    rect.setAttribute('height', Math.max(0, yBottom - yTop));
+  }
+
+  setBandRect('bandHeavy', topY, intoxTopY);
+  setBandRect('bandIntoxication', intoxTopY, mildTopY);
+  setBandRect('bandMild', mildTopY, lowerTopY);
+  setBandRect('bandLower', lowerTopY, bottomY);
+
+  var thresholdLine = document.getElementById('thresholdLine008');
+  var thresholdLabel = document.getElementById('thresholdLabel008');
+  if (thresholdLine) {
+    thresholdLine.setAttribute('y1', lowerTopY);
+    thresholdLine.setAttribute('y2', lowerTopY);
+  }
+  if (thresholdLabel) {
+    thresholdLabel.setAttribute('y', Math.max(topY + 9, lowerTopY - 3));
+  }
+}
+
 function updateZoneLegend(currentBac) {
   var activeZone = bacZoneForValue(currentBac);
   document.querySelectorAll('.zone-card[data-bac-zone]').forEach(function(card) {
@@ -819,12 +862,16 @@ function updateZoneLegend(currentBac) {
   });
 }
 
-function estimateNearZeroHourFromCurve(curve, currentHour) {
+function estimateNearZeroHourFromCurve(curve, currentHour, peakHour) {
   var threshold = 0.003;
+  var searchStartHour = Math.max(
+    Number.isFinite(currentHour) ? currentHour : 0,
+    Number.isFinite(peakHour) ? peakHour : 0
+  );
   var sawPositive = false;
   for (var i = 0; i < curve.length; i++) {
     var point = curve[i];
-    if (point.hour < currentHour) continue;
+    if (point.hour < searchStartHour) continue;
     if (point.estimate > threshold) sawPositive = true;
     else if (sawPositive) return point.hour;
   }
@@ -949,13 +996,15 @@ function renderResult(data, summary, session, profile, requestPayload) {
   var beta  = Number(model.beta_per_hour) || 0;
   var backendCurve = normalizeBackendCurve(data.curve);
   var sessionCurve = getSessionCurveForRender(backendCurve, requestPayload);
+  var markerBac = sessionCurve.length > 0 ? interpolateCurveAtHour(sessionCurve, summary.elapsed) : null;
+  var currentBacForUi = Number.isFinite(markerBac) ? markerBac : estValue;
 
   // BAC display
   var bacEl = document.getElementById('bacDisplay');
   bacEl.textContent = est.toFixed(3);
   var color = est < 0.05 ? 'var(--accent)' : est < 0.08 ? 'var(--orange)' : 'var(--red)';
   bacEl.style.color = color;
-  updateZoneLegend(estValue);
+  updateZoneLegend(currentBacForUi);
 
   // Peak BAC display
   var curvePeak = peakFromCurve(sessionCurve, summary.elapsed);
@@ -976,8 +1025,9 @@ function renderResult(data, summary, session, profile, requestPayload) {
   }
 
   // Status
-  if (est < 0.05)       setStatus('Lower estimated risk right now', 'lower');
-  else if (est < 0.08)  setStatus('Elevated estimated risk — approaching 0.08 threshold', 'warn');
+  var statusBac = Number.isFinite(currentBacForUi) ? currentBacForUi : est;
+  if (statusBac < 0.05)       setStatus('Lower estimated risk right now', 'lower');
+  else if (statusBac < 0.08)  setStatus('Elevated estimated risk — approaching 0.08 threshold', 'warn');
   else                  setStatus('Above common legal driving threshold (0.08)', 'danger');
 
   // Detail row
@@ -985,8 +1035,10 @@ function renderResult(data, summary, session, profile, requestPayload) {
   document.getElementById('displayHigh').textContent = high.toFixed(3);
 
   // Estimated BAC near-zero time
-  var nearZeroHour = estimateNearZeroHourFromCurve(sessionCurve, summary.elapsed);
-  if (!Number.isFinite(nearZeroHour)) nearZeroHour = data.estimated_near_zero_hour == null ? NaN : Number(data.estimated_near_zero_hour);
+  var nearZeroHour = estimateNearZeroHourFromCurve(sessionCurve, summary.elapsed, peakHour);
+  if (!Number.isFinite(nearZeroHour) && sessionCurve.length === 0) {
+    nearZeroHour = data.estimated_near_zero_hour == null ? NaN : Number(data.estimated_near_zero_hour);
+  }
   if (!Number.isFinite(nearZeroHour) && est > 0 && beta > 0) nearZeroHour = summary.elapsed + (est / beta);
   document.getElementById('displaySober').textContent =
     Number.isFinite(nearZeroHour) && nearZeroHour > summary.elapsed ? clockFromSessionHour(session, nearZeroHour) : '—';
@@ -1035,7 +1087,6 @@ function renderResult(data, summary, session, profile, requestPayload) {
   // The curve is session-relative and fixed for the current drink/profile set;
   // only the marker advances with elapsed time between material input changes.
   if (sessionCurve.length > 0) {
-    var markerBac = interpolateCurveAtHour(sessionCurve, summary.elapsed);
     updateGraphFromBackendCurve(
       sessionCurve,
       summary.elapsed,
@@ -1100,11 +1151,17 @@ function setGraphXLabels(totalH) {
 
 function drawCurve(points, currentHour, currentBac, peakPoint) {
   if (!points || points.length === 0) { resetGraph(); return; }
-  var svgH = 300, maxBAC = 0.40;
+  var svgH = 300;
+  var curveMax = points.reduce(function(max, point) {
+    return Math.max(max, Number(point.estimate) || 0, Number(point.high) || 0, Number(point.low) || 0);
+  }, 0);
+  var markerMax = Number.isFinite(Number(currentBac)) ? Number(currentBac) : 0;
+  var maxBAC = Math.max(0.40, curveMax * 1.1, markerMax * 1.1);
   var totalH = Math.max(6, points[points.length - 1].hour || 0);
   setGraphXLabels(totalH);
+  applyGraphBands(maxBAC);
 
-  function toY(b) { return svgH - 10 - Math.min(1, Math.max(0, b / maxBAC)) * (svgH - 20); }
+  function toY(b) { return graphYForBac(b, maxBAC, svgH); }
   function toX(h) { return Math.min(520, Math.max(0, (h / totalH) * 520)); }
 
   var pathD = '', areaD = '';

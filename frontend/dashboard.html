@@ -406,7 +406,7 @@
   /* ── BOTTOM GRID ── */
   .bottom-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 1.5rem;
   }
 
@@ -438,52 +438,6 @@
     font-size: 0.68rem;
     color: var(--muted);
     margin-top: 0.1rem;
-  }
-
-  /* ── HYDRATION / CONTEXT ── */
-  .context-row {
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-  }
-
-  .context-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .context-icon {
-    min-width: 74px;
-    flex-shrink: 0;
-    border-radius: 999px;
-    padding: 0.25rem 0.55rem;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.04);
-    color: var(--muted-mid);
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-align: center;
-    text-transform: uppercase;
-  }
-
-  .context-meta { flex: 1; }
-  .context-name { font-size: 0.82rem; font-weight: 500; }
-  .context-val { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
-
-  .progress-bar {
-    height: 4px;
-    background: var(--border);
-    border-radius: 100px;
-    overflow: hidden;
-    margin-top: 0.4rem;
-  }
-
-  .progress-fill {
-    height: 100%;
-    border-radius: 100px;
-    transition: width 1s ease;
   }
 
   /* ── PROFILE CALLOUT (non-blocking) ── */
@@ -540,7 +494,7 @@
   @media (max-width: 1100px) {
     .metrics-row { grid-template-columns: repeat(2, 1fr); }
     .content-grid { grid-template-columns: 1fr; }
-    .bottom-grid { grid-template-columns: 1fr 1fr; }
+    .bottom-grid { grid-template-columns: 1fr; }
   }
 
   @media (max-width: 800px) {
@@ -779,35 +733,6 @@
         </div>
         <p id="personalizationDataControlsMsg" role="status" style="font-size:0.7rem;color:var(--accent);margin-top:0.5rem;min-height:1.15em;"></p>
       </details>
-    </div>
-
-    <!-- Session context -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Session Context</div>
-          <div class="card-sub">Not available yet</div>
-        </div>
-      </div>
-      <div class="context-row" id="sessionContextBody"></div>
-    </div>
-
-    <!-- Threshold reference -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-title">Threshold Reference</div>
-          <div class="card-sub">Estimate only; not legal or medical advice</div>
-        </div>
-      </div>
-      <div style="text-align: center; padding: 1.5rem 0 1rem;">
-        <div style="font-family: 'Syne', sans-serif; font-weight: 800; font-size: 3.5rem; color: var(--accent); letter-spacing: -3px; line-height: 1;">—</div>
-        <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem;">Not enough information to estimate a personal threshold yet.</div>
-        <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.75rem; padding: 0.6rem; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid var(--border);">
-          Estimate only; not legal or medical advice. Do not use this to decide whether to drive.
-        </div>
-      </div>
-      <a href="bac-calculator.html"><button class="btn-sm btn-sm-accent" style="width: 100%; border-radius: 12px; padding: 0.75rem; font-size: 0.9rem;">Start Logging →</button></a>
     </div>
 
   </div>
@@ -1158,12 +1083,6 @@
     labels.innerHTML = labelValues.join('');
   }
 
-  function renderSessionContext(sessions) {
-    var body = document.getElementById('sessionContextBody');
-    if (!body) return;
-    body.innerHTML = renderEmptyState('This feature is not available yet', 'Future versions may summarize validated post-session feedback here.', '', '');
-  }
-
   function formatBeta(value) {
     return value == null ? '—' : Number(value).toFixed(4);
   }
@@ -1450,7 +1369,6 @@
     renderMetrics(profile, hasProfile, sessions, personalizationSummary);
     renderBacHistory(sessions);
     renderRecentSessions(sessions);
-    renderSessionContext(sessions);
     renderPersonalizationCard(personalizationSummary);
     renderReliabilitySummary(reliabilitySummary);
     renderPersonalizationEvidence(evidenceRows);
