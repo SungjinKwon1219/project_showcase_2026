@@ -112,14 +112,16 @@ Current frontend conversions:
 
 Do not implement complex ML, reinforcement learning, Q-learning, or PPO.
 
-Do not implement Bayesian personalization until the app has enough structured session/review data.
+Do not implement broad Bayesian personalization until the app has enough structured session/feedback data.
 
 For now:
 - Keep predictions deterministic.
 - Use `estimate_beta(...)` as simple beta scaffolding.
-- Use `personalize_beta(...)` only as a placeholder if needed.
+- Current personalization is limited to elimination-rate/beta calibration from high-confidence post-session feedback.
+- Feedback is subjective context and is not treated as a ground-truth BAC measurement.
+- The app does not currently personalize absorption, body-water distribution (`r`), food effects, drink-size logging error, or impairment interpretation.
 - Do not treat symptoms or post-session feedback as exact BAC measurements.
-- Symptoms and reviews are subjective calibration/context data for future personalization.
+- Symptoms and feedback are subjective context data.
 
 ## Current Completed Work
 
