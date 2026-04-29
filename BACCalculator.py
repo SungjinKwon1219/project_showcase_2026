@@ -20,7 +20,8 @@ Modeling approach:
 
 from __future__ import annotations
 
-from typing import Iterable, Optional
+import math
+from typing import Any, Iterable
 
 
 # ── Population-level constants ─────────────────────────────────────────────
@@ -206,21 +207,31 @@ def implied_beta_from_session(
     r: float,
     felt_sober_hours: float,
 ) -> float | None:
-    """Back-calculate a session-implied beta from post-session review data.
+    """Legacy single-drink implied-beta wrapper.
 
-    Uses: felt_sober time as a proxy for when BAC ≈ 0.
-    If the user drank X grams (peak BAC = X/(W*10*r)) and felt sober after T hours,
-    then: 0 = peak_BAC - beta*T  =>  beta = peak_BAC / T
+    New event-aware API code should call reversebeta.estimate_implied_beta_from_session().
+    This wrapper preserves the old behavior by treating the session as one drink
+    at t=0 and using a 0.0 final BAC anchor.
 
     Returns:
         Implied beta clamped to valid range, or None if inputs are invalid.
     """
-    if felt_sober_hours <= 0 or grams_alcohol <= 0 or weight_kg <= 0 or r <= 0:
+    from reversebeta import estimate_implied_beta_from_session
+
+    result = estimate_implied_beta_from_session(
+        grams_by_drink=[grams_alcohol],
+        drink_times_hours=[0.0],
+        felt_sober_hours=felt_sober_hours,
+        weight_kg=weight_kg,
+        r=r,
+        final_bac_anchor=0.0,
+        min_beta=MIN_BETA_PER_HOUR,
+        max_beta=MAX_BETA_PER_HOUR,
+    )
+    implied = result.get("implied_beta")
+    if implied is None:
         return None
-    peak_bac = grams_alcohol / (weight_kg * 10.0 * r)
-    if peak_bac <= 0:
-        return None
-    return clamp(peak_bac / felt_sober_hours, MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR)
+    return float(implied)
 
 
 def personalize_beta(
@@ -228,42 +239,29 @@ def personalize_beta(
     session_implied_betas: list[float] | None = None,
     prior_weight: float = PRIOR_SESSION_WEIGHT,
 ) -> float:
-    """Bayesian shrinkage estimator for beta.
-
-    Weighted average of population prior and user's session-implied betas.
-    Formula: beta_personal = (W_prior * beta_prior + N * beta_session_mean)
-                             / (W_prior + N)
-
-    Early on (few sessions): prior dominates.
-    Over time (many sessions): personal history dominates.
-
-    At N = PRIOR_SESSION_WEIGHT sessions, weight is 50/50.
+    """Backward-compatible wrapper around BayesianStats personalization.
 
     Args:
         prior_beta:            Population or demographic prior for this user.
         session_implied_betas: List of back-calculated betas from past sessions.
-        prior_weight:          Effective session count the prior is worth.
+        prior_weight:          Deprecated; retained for call compatibility.
 
     Returns:
         Personalized beta clamped to [MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR].
     """
-    validate_positive_number(prior_beta,   "prior_beta")
+    validate_positive_number(prior_beta, "prior_beta")
     validate_positive_number(prior_weight, "prior_weight")
 
-    if not session_implied_betas:
-        return clamp(prior_beta, MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR)
+    from BayesianStats import estimate_personalized_beta
 
-    valid_betas = [
-        float(b) for b in session_implied_betas
-        if isinstance(b, (int, float)) and MIN_BETA_PER_HOUR <= b <= MAX_BETA_PER_HOUR
-    ]
-    if not valid_betas:
-        return clamp(prior_beta, MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR)
-
-    n            = len(valid_betas)
-    session_mean = sum(valid_betas) / n
-    personalized = (prior_weight * prior_beta + n * session_mean) / (prior_weight + n)
-    return clamp(personalized, MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR)
+    result = estimate_personalized_beta(
+        observed_betas=session_implied_betas or [],
+        population_beta=prior_beta,
+        prior_sd=DEFAULT_BETA_SD,
+        min_beta=MIN_BETA_PER_HOUR,
+        max_beta=MAX_BETA_PER_HOUR,
+    )
+    return float(result["beta"])
 
 
 def estimate_beta(
@@ -376,6 +374,395 @@ def calculate_bac_range(
         "low":      max(ordered[0], 0.0),
         "estimate": max(ordered[1], 0.0),
         "high":     max(ordered[2], 0.0),
+    }
+
+
+# ── Event-aware BAC curve calculation ─────────────────────────────────────
+
+EVENT_CURVE_MODEL = "per_drink_absorption_with_independent_elimination_approximation"
+DEFAULT_CURVE_STEP_MINUTES = 10
+NEAR_ZERO_BAC_THRESHOLD = 0.003
+
+
+def _coerce_finite_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _first_present(mapping: dict[str, Any], names: list[str]) -> Any:
+    for name in names:
+        if name in mapping:
+            return mapping.get(name)
+    return None
+
+
+def normalize_drink_events(drink_events: Iterable[Any] | None) -> tuple[list[dict[str, float]], int, list[str]]:
+    """Normalize event-level drink input for BAC prediction.
+
+    Returns:
+        ``(events, ignored_count, warnings)`` where each event has
+        ``grams_alcohol`` and ``hours_from_session_start``. Invalid events are
+        ignored so old or partially corrupt frontend storage cannot crash a
+        prediction request.
+    """
+    warnings: list[str] = []
+    if drink_events is None:
+        return [], 0, warnings
+    if isinstance(drink_events, (str, bytes)):
+        return [], 1, ["drink_events_not_list"]
+
+    try:
+        raw_events = list(drink_events)
+    except TypeError:
+        return [], 1, ["drink_events_not_list"]
+
+    events: list[dict[str, float]] = []
+    ignored = 0
+    for raw in raw_events:
+        if not isinstance(raw, dict):
+            ignored += 1
+            continue
+        grams = _coerce_finite_float(_first_present(raw, ["grams_alcohol", "grams", "alcohol_grams"]))
+        hour = _coerce_finite_float(_first_present(raw, ["hours_from_session_start", "time_hours", "t"]))
+        if grams is None or grams <= 0 or hour is None or hour < 0:
+            ignored += 1
+            continue
+        events.append({
+            "grams_alcohol": grams,
+            "hours_from_session_start": hour,
+        })
+
+    if ignored:
+        warnings.append("invalid_drink_events_ignored")
+
+    sorted_events = sorted(events, key=lambda event: event["hours_from_session_start"])
+    if sorted_events != events:
+        warnings.append("drink_events_sorted_by_time")
+    return sorted_events, ignored, warnings
+
+
+def absorbed_alcohol_at_time(
+    drink_events: Iterable[Any] | None,
+    t: float,
+    food_intake: str = "none",
+) -> float:
+    """Return total grams absorbed by time ``t`` from normalized/raw events."""
+    from reversebeta import absorbed_grams
+
+    time = _coerce_finite_float(t)
+    if time is None:
+        return 0.0
+    events, _, _ = normalize_drink_events(drink_events)
+    return sum(
+        absorbed_grams(
+            food_intake,
+            event["grams_alcohol"],
+            event["hours_from_session_start"],
+            time,
+        )
+        for event in events
+    )
+
+
+def event_aware_bac_at_time(
+    drink_events: Iterable[Any] | None,
+    t: float,
+    weight_kg: float,
+    r: float,
+    beta_per_hour: float,
+    food_intake: str = "none",
+) -> float:
+    """Estimate BAC at time ``t`` using drink timing and absorption.
+
+    This is an explainable approximation for product estimation: each drink is
+    absorbed with the shared food-adjusted absorption curve, converted into BAC
+    display units, then reduced by beta from that drink's event time. Real
+    elimination acts on total body alcohol rather than independent drinks, so
+    response metadata names this approximation explicitly.
+    """
+    from reversebeta import absorbed_grams, bac_from_grams
+
+    time = _coerce_finite_float(t)
+    validate_positive_number(weight_kg, "weight_kg")
+    validate_positive_number(r, "r")
+    validate_nonnegative_number(beta_per_hour, "beta_per_hour")
+    if time is None or time < 0:
+        raise ValueError("t must be a finite nonnegative number.")
+
+    r_clamped = clamp(r, MIN_R, MAX_R)
+    beta_clamped = clamp(beta_per_hour, MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR)
+    events, _, _ = normalize_drink_events(drink_events)
+    total_bac = 0.0
+
+    for event in events:
+        drink_time = event["hours_from_session_start"]
+        absorbed = absorbed_grams(food_intake, event["grams_alcohol"], drink_time, time)
+        if absorbed <= 0:
+            continue
+        contribution_bac = bac_from_grams(absorbed, weight_kg, r_clamped)
+        eliminated_bac = beta_clamped * max(0.0, time - drink_time)
+        total_bac += max(0.0, contribution_bac - eliminated_bac)
+
+    return max(total_bac, 0.0)
+
+
+def calculate_event_aware_bac_range(
+    drink_events: Iterable[Any] | None,
+    weight_kg: float,
+    r: float,
+    beta_per_hour: float,
+    hours_elapsed: float,
+    food_intake: str = "none",
+    r_margin: float = 0.05,
+    beta_margin: float = DEFAULT_BETA_SD,
+) -> dict[str, float]:
+    """Return low/estimate/high BAC range using event-aware timing."""
+    estimate = event_aware_bac_at_time(
+        drink_events, hours_elapsed, weight_kg, r, beta_per_hour, food_intake
+    )
+    low = event_aware_bac_at_time(
+        drink_events,
+        hours_elapsed,
+        weight_kg,
+        clamp(r + r_margin, MIN_R, MAX_R),
+        clamp(beta_per_hour + beta_margin, MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR),
+        food_intake,
+    )
+    high = event_aware_bac_at_time(
+        drink_events,
+        hours_elapsed,
+        weight_kg,
+        clamp(r - r_margin, MIN_R, MAX_R),
+        clamp(beta_per_hour - beta_margin, MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR),
+        food_intake,
+    )
+    ordered = sorted([low, estimate, high])
+    return {
+        "low": max(ordered[0], 0.0),
+        "estimate": max(ordered[1], 0.0),
+        "high": max(ordered[2], 0.0),
+    }
+
+
+def _curve_hours(
+    *,
+    current_time_hours: float | None,
+    last_drink_time: float,
+    step_hours: float,
+    horizon_hours: float | None,
+) -> list[float]:
+    current = current_time_hours if current_time_hours is not None else 0.0
+    if horizon_hours is None:
+        horizon = max(current + 4.0, last_drink_time + 8.0, 8.0)
+    else:
+        horizon = horizon_hours
+    horizon = clamp(horizon, max(current, 0.0), 24.0)
+
+    hours: list[float] = []
+    point = 0.0
+    while point <= horizon + 1e-9:
+        hours.append(round(point, 4))
+        point += step_hours
+    for extra in (current, horizon):
+        if extra is not None and extra >= 0:
+            hours.append(round(extra, 4))
+    return sorted(set(hours))
+
+
+def generate_event_aware_bac_curve(
+    drink_events: Iterable[Any] | None,
+    weight_kg: float,
+    r: float,
+    beta_per_hour: float,
+    food_intake: str = "none",
+    current_time_hours: float | None = None,
+    horizon_hours: float | None = None,
+    step_minutes: int = DEFAULT_CURVE_STEP_MINUTES,
+) -> dict[str, Any]:
+    """Generate backend-owned event-aware BAC curve points.
+
+    The curve uses display-scale BAC units and the same beta/r units as
+    ``calculate_bac``. Returned metadata names the approximation so the product
+    does not overstate medical precision.
+    """
+    from reversebeta import absorption_peak_hours, normalize_food_intake
+
+    validate_positive_number(weight_kg, "weight_kg")
+    validate_positive_number(r, "r")
+    validate_nonnegative_number(beta_per_hour, "beta_per_hour")
+    events, ignored, warnings = normalize_drink_events(drink_events)
+    food = normalize_food_intake(food_intake)
+    if not events:
+        return {
+            "curve": [],
+            "current_bac": None,
+            "estimated_near_zero_hour": None,
+            "metadata": {
+                "source": "legacy_total_grams",
+                "model": "legacy_total_grams_all_at_start",
+                "food_intake": food,
+                "step_minutes": step_minutes,
+                "valid_drink_events": 0,
+                "ignored_drink_events": ignored,
+                "warnings": warnings + ["no_valid_drink_events_for_event_curve"],
+            },
+        }
+
+    step = max(1, int(step_minutes)) / 60.0
+    current = _coerce_finite_float(current_time_hours)
+    if current is not None and current < 0:
+        current = 0.0
+    last_drink_time = max(event["hours_from_session_start"] for event in events)
+    near_zero_search_start = max(
+        current or 0.0,
+        last_drink_time + absorption_peak_hours(food),
+    )
+    hours = _curve_hours(
+        current_time_hours=current,
+        last_drink_time=last_drink_time,
+        step_hours=step,
+        horizon_hours=horizon_hours,
+    )
+
+    curve = []
+    near_zero_hour = None
+    has_positive_after_current = False
+    for hour in hours:
+        values = calculate_event_aware_bac_range(
+            events,
+            weight_kg=weight_kg,
+            r=r,
+            beta_per_hour=beta_per_hour,
+            hours_elapsed=hour,
+            food_intake=food,
+        )
+        estimate = values["estimate"]
+        if hour >= near_zero_search_start:
+            if estimate > NEAR_ZERO_BAC_THRESHOLD:
+                has_positive_after_current = True
+            elif has_positive_after_current and near_zero_hour is None:
+                near_zero_hour = hour
+        curve.append({
+            "hour": round(hour, 4),
+            "low": round(values["low"], 6),
+            "estimate": round(estimate, 6),
+            "high": round(values["high"], 6),
+        })
+
+    while near_zero_hour is None and hours[-1] < 24.0:
+        next_hour = min(24.0, round(hours[-1] + max(1.0, step), 4))
+        hours.append(next_hour)
+        values = calculate_event_aware_bac_range(
+            events,
+            weight_kg=weight_kg,
+            r=r,
+            beta_per_hour=beta_per_hour,
+            hours_elapsed=next_hour,
+            food_intake=food,
+        )
+        estimate = values["estimate"]
+        if next_hour >= near_zero_search_start:
+            if estimate > NEAR_ZERO_BAC_THRESHOLD:
+                has_positive_after_current = True
+            elif has_positive_after_current:
+                near_zero_hour = next_hour
+        curve.append({
+            "hour": round(next_hour, 4),
+            "low": round(values["low"], 6),
+            "estimate": round(estimate, 6),
+            "high": round(values["high"], 6),
+        })
+
+    current_values = (
+        calculate_event_aware_bac_range(
+            events,
+            weight_kg=weight_kg,
+            r=r,
+            beta_per_hour=beta_per_hour,
+            hours_elapsed=current,
+            food_intake=food,
+        )
+        if current is not None
+        else None
+    )
+
+    return {
+        "curve": curve,
+        "current_bac": current_values,
+        "estimated_near_zero_hour": near_zero_hour,
+        "metadata": {
+            "source": "event_aware",
+            "model": EVENT_CURVE_MODEL,
+            "food_intake": food,
+            "step_minutes": max(1, int(step_minutes)),
+            "valid_drink_events": len(events),
+            "ignored_drink_events": ignored,
+            "warnings": warnings,
+        },
+    }
+
+
+def generate_legacy_bac_curve(
+    alc_g: float,
+    weight_kg: float,
+    r: float,
+    beta_per_hour: float,
+    current_time_hours: float = 0.0,
+    horizon_hours: float | None = None,
+    step_minutes: int = DEFAULT_CURVE_STEP_MINUTES,
+) -> dict[str, Any]:
+    """Generate a simple all-at-start fallback curve for old payloads."""
+    step = max(1, int(step_minutes)) / 60.0
+    current = max(0.0, current_time_hours)
+    horizon = horizon_hours if horizon_hours is not None else max(current + 4.0, 8.0)
+    horizon = clamp(horizon, current, 24.0)
+    hours = _curve_hours(
+        current_time_hours=current,
+        last_drink_time=0.0,
+        step_hours=step,
+        horizon_hours=horizon,
+    )
+    curve = []
+    near_zero_hour = None
+    has_positive_after_current = False
+    for hour in hours:
+        values = calculate_bac_range(
+            alc_g=alc_g,
+            weight_kg=weight_kg,
+            r=r,
+            beta_per_hour=beta_per_hour,
+            hours_elapsed=hour,
+        )
+        estimate = values["estimate"]
+        if hour >= current:
+            if estimate > NEAR_ZERO_BAC_THRESHOLD:
+                has_positive_after_current = True
+            elif has_positive_after_current and near_zero_hour is None:
+                near_zero_hour = hour
+        curve.append({
+            "hour": round(hour, 4),
+            "low": round(values["low"], 6),
+            "estimate": round(estimate, 6),
+            "high": round(values["high"], 6),
+        })
+
+    return {
+        "curve": curve,
+        "estimated_near_zero_hour": near_zero_hour,
+        "metadata": {
+            "source": "legacy_total_grams",
+            "model": "legacy_total_grams_all_at_start",
+            "food_intake": "none",
+            "step_minutes": max(1, int(step_minutes)),
+            "valid_drink_events": 0,
+            "ignored_drink_events": 0,
+            "warnings": ["legacy_total_grams_curve"],
+        },
     }
 
 

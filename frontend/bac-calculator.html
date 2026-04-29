@@ -271,7 +271,7 @@
           </div>
           <div class="result-detail">
             <div class="result-detail-val" id="displaySober">—</div>
-            <div class="result-detail-label">Est. sober at</div>
+            <div class="result-detail-label">Estimated BAC near zero around</div>
           </div>
         </div>
         <div class="model-badge">r̂ = <span id="rDisplay">—</span> · β = <span id="betaDisplay">—</span></div>
@@ -314,7 +314,7 @@
         <div class="graph-x-labels"><span>0h</span><span>1h</span><span>2h</span><span>3h</span><span>4h</span><span>5h</span><span>6h</span></div>
         <div class="legend">
           <div class="legend-item"><div class="legend-line" style="background:var(--accent);"></div>Estimated BAC</div>
-          <div class="legend-item"><div class="legend-line" style="background:var(--red);opacity:0.6;"></div>0.08 legal threshold</div>
+          <div class="legend-item"><div class="legend-line" style="background:var(--red);opacity:0.6;"></div>0.08 common legal driving threshold</div>
         </div>
       </div>
 
@@ -337,6 +337,7 @@ const EtOH_DENSITY = 0.789;
 const GRAMS_PER_STD = 14;
 
 let sessionEndedNoticeVisible = false;
+let lastQuickPickLabel = '';
 
 /* ── Profile helpers ── */
 function readProfile() {
@@ -358,6 +359,22 @@ function normalizeProfile(p) {
 }
 
 function getProfile() { return normalizeProfile(readProfile()); }
+
+function buildProfileSnapshot(profile, r) {
+  if (!profile) return null;
+  var snapshot = {
+    name: profile.name || '',
+    sex: profile.sex,
+    age_years: profile.ageYears,
+    height_cm: profile.heightCm,
+    weight_kg: profile.weightKg,
+    body_fat_percent: profile.bodyFatPercent,
+    body_fat_bracket: profile.bodyFatBracket,
+    drinks_per_week: profile.drinksPerWeek
+  };
+  if (Number.isFinite(Number(r)) && Number(r) > 0) snapshot.r = Number(r);
+  return snapshot;
+}
 
 /* ── Sidebar avatar ── */
 function syncSidebarAvatar() {
@@ -404,14 +421,15 @@ function updateDrinkPreview() {
   el.textContent = d ? `≈ ${d.grams.toFixed(1)} g ethanol · ${d.std.toFixed(2)} standard drinks` : 'Enter ABV and oz to preview ethanol.';
 }
 
-document.getElementById('abvInput').addEventListener('input', updateDrinkPreview);
-document.getElementById('ozInput').addEventListener('input', updateDrinkPreview);
+document.getElementById('abvInput').addEventListener('input', function() { lastQuickPickLabel = ''; updateDrinkPreview(); });
+document.getElementById('ozInput').addEventListener('input', function() { lastQuickPickLabel = ''; updateDrinkPreview(); });
 
 /* Quick-pick buttons */
 document.querySelectorAll('.qp-btn').forEach(function(btn) {
   btn.addEventListener('click', function() {
     document.getElementById('abvInput').value = btn.dataset.abv;
     document.getElementById('ozInput').value  = btn.dataset.oz;
+    lastQuickPickLabel = btn.dataset.label || '';
     updateDrinkPreview();
   });
 });
@@ -428,6 +446,33 @@ function summarize(session) {
   var std    = grams / GRAMS_PER_STD;
   var elapsed = Math.max(0, (Date.now() - new Date(session.started_at || Date.now()).getTime()) / 3600000);
   return { drinks: drinks.length, grams, std, elapsed };
+}
+
+function hoursFromSessionStart(session, timestamp) {
+  var start = new Date(session.started_at || Date.now()).getTime();
+  var eventTime = new Date(timestamp || Date.now()).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(eventTime)) return 0;
+  return Math.max(0, (eventTime - start) / 3600000);
+}
+
+function drinkEventsForPayload(session) {
+  var events = Array.isArray(session.events) ? session.events : [];
+  return events.filter(function(e) { return e && e.event_type === 'drink'; }).map(function(e) {
+    var hours = Number(e.hours_from_session_start);
+    if (!Number.isFinite(hours)) hours = hoursFromSessionStart(session, e.timestamp);
+    var grams = Number(e.grams_alcohol) || 0;
+    return {
+      grams_alcohol: grams,
+      standard_drinks: Number(e.standard_drinks) || (grams / GRAMS_PER_STD),
+      hours_from_session_start: Number(hours.toFixed(4)),
+      timestamp: e.timestamp || null,
+      label: e.label || '',
+      volume_fl_oz: Number.isFinite(Number(e.volume_fl_oz)) ? Number(e.volume_fl_oz) : null,
+      abv_percent: Number.isFinite(Number(e.abv_percent)) ? Number(e.abv_percent) : null
+    };
+  }).filter(function(e) {
+    return Number.isFinite(e.grams_alcohol) && e.grams_alcohol > 0 && Number.isFinite(e.hours_from_session_start);
+  });
 }
 
 /* ── Session flow UI ── */
@@ -476,14 +521,18 @@ document.getElementById('btnLogDrink').addEventListener('click', function() {
   errEl.textContent = '';
   var session = getActive();
   if (!session) return;
+  var timestamp = new Date().toISOString();
+  var hoursFromStart = hoursFromSessionStart(session, timestamp);
+  var label = lastQuickPickLabel || (d.oz + ' oz @ ' + d.abv + '% ABV');
   SaferSessionStorage.addEventToSession(session.session_id, {
     event_type: 'drink',
-    timestamp: new Date().toISOString(),
+    timestamp: timestamp,
+    hours_from_session_start: Number(hoursFromStart.toFixed(4)),
     abv_percent: d.abv,
     volume_fl_oz: d.oz,
     grams_alcohol: d.grams,
     standard_drinks: d.std,
-    label: d.oz + ' oz @ ' + d.abv + '% ABV'
+    label: label
   });
   refreshSessionStatus(getActive());
   updateBtnState();
@@ -519,7 +568,7 @@ document.getElementById('btnEndSession').addEventListener('click', function() {
 document.getElementById('btnUpdate').addEventListener('click', doCompute);
 
 /* ── Build /predict payload ── */
-function buildPayload(profile, grams, std, elapsed) {
+function buildPayload(profile, session, summary) {
   var impliedBetas = SaferSessionStorage.getAllImpliedBetas();
   return {
     profile: {
@@ -532,9 +581,10 @@ function buildPayload(profile, grams, std, elapsed) {
       drinks_per_week: profile.drinksPerWeek
     },
     session: {
-      grams_alcohol: grams,
-      standard_drinks: std,
-      hours_elapsed: elapsed
+      grams_alcohol: summary.grams,
+      standard_drinks: summary.std,
+      hours_elapsed: summary.elapsed,
+      drink_events: drinkEventsForPayload(session)
     },
     history: {
       session_implied_betas: impliedBetas
@@ -560,6 +610,7 @@ async function _doComputeNow() {
   // Update session inputs
   session.inputs.drinks       = s.std;
   session.inputs.hours_elapsed = Number(s.elapsed.toFixed(3));
+  if (!session.profile_snapshot) session.profile_snapshot = buildProfileSnapshot(p, null);
   session.updated_at           = new Date().toISOString();
   SaferSessionStorage.updateSession(session);
 
@@ -568,13 +619,13 @@ async function _doComputeNow() {
   btn.disabled    = true;
   document.getElementById('errorCard').style.display = 'none';
 
-  var payload = buildPayload(p, s.grams, s.std, s.elapsed);
+  var payload = buildPayload(p, session, s);
 
   try {
     var res = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
     if (!res.ok) throw new Error('API error ' + res.status);
     var data = await res.json();
-    renderResult(data, s, session, p);
+    renderResult(data, s, session, p, payload);
   } catch(err) {
     document.getElementById('errorCard').style.display = 'block';
   }
@@ -583,8 +634,45 @@ async function _doComputeNow() {
   updateBtnState();
 }
 
+function normalizeBackendCurve(curve) {
+  if (!Array.isArray(curve)) return [];
+  return curve.map(function(point) {
+    var hour = Number(point.hour);
+    var estimate = Number(point.estimate != null ? point.estimate : point.bac);
+    var low = Number(point.low);
+    var high = Number(point.high);
+    return {
+      hour: hour,
+      estimate: estimate,
+      low: Number.isFinite(low) ? low : estimate,
+      high: Number.isFinite(high) ? high : estimate
+    };
+  }).filter(function(point) {
+    return Number.isFinite(point.hour) && point.hour >= 0 &&
+      Number.isFinite(point.estimate) && point.estimate >= 0;
+  }).sort(function(a, b) { return a.hour - b.hour; });
+}
+
+function estimateNearZeroHourFromCurve(curve, currentHour) {
+  var threshold = 0.003;
+  var sawPositive = false;
+  for (var i = 0; i < curve.length; i++) {
+    var point = curve[i];
+    if (point.hour < currentHour) continue;
+    if (point.estimate > threshold) sawPositive = true;
+    else if (sawPositive) return point.hour;
+  }
+  return null;
+}
+
+function clockFromSessionHour(session, hour) {
+  var startMs = new Date(session && session.started_at ? session.started_at : Date.now()).getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(hour) || hour < 0) return '—';
+  return new Date(startMs + hour * 3600000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
 /* ── Render result ── */
-function renderResult(data, summary, session, profile) {
+function renderResult(data, summary, session, profile, requestPayload) {
   var model = data.model || {};
   var bac   = data.bac   || {};
   var est   = Number(bac.estimate) || 0;
@@ -608,10 +696,13 @@ function renderResult(data, summary, session, profile) {
   document.getElementById('displayLow').textContent  = low.toFixed(3);
   document.getElementById('displayHigh').textContent = high.toFixed(3);
 
-  // Estimated sober time
-  var soberHours = est > 0 && beta > 0 ? (est / beta) : 0;
-  var soberAt = soberHours > 0 ? new Date(Date.now() + soberHours * 3600000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—';
-  document.getElementById('displaySober').textContent = soberAt;
+  // Estimated BAC near-zero time
+  var backendCurve = normalizeBackendCurve(data.curve);
+  var nearZeroHour = data.estimated_near_zero_hour == null ? NaN : Number(data.estimated_near_zero_hour);
+  if (!Number.isFinite(nearZeroHour)) nearZeroHour = estimateNearZeroHourFromCurve(backendCurve, summary.elapsed);
+  if (!Number.isFinite(nearZeroHour) && est > 0 && beta > 0) nearZeroHour = summary.elapsed + (est / beta);
+  document.getElementById('displaySober').textContent =
+    Number.isFinite(nearZeroHour) && nearZeroHour > summary.elapsed ? clockFromSessionHour(session, nearZeroHour) : '—';
 
   // Model badges
   document.getElementById('rDisplay').textContent    = r.toFixed(3);
@@ -634,23 +725,40 @@ function renderResult(data, summary, session, profile) {
   }
 
   // Tip text
-  var disc = (data.meta && data.meta.disclaimer) ? data.meta.disclaimer : 'Estimate only; not legal or medical advice. Do not use to decide whether to drive.';
+  var disc = (data.meta && data.meta.disclaimer) ? data.meta.disclaimer : 'Estimates are approximate and should not be used to decide whether to drive or for medical decisions.';
   document.getElementById('tipText').innerHTML =
     '<strong>Range:</strong> ' + low.toFixed(3) + ' – ' + high.toFixed(3) + ' · ' +
     '<strong>Central:</strong> ' + est.toFixed(3) + '<br><span style="opacity:0.7">' + disc + '</span>';
 
   // Persist snapshot
-  session.prediction_snapshot = {
+  var snapshot = {
     r: r, beta_per_hour: beta,
     bac_low: low, bac_estimate: est, bac_high: high,
+    estimate: est,
+    beta: beta,
+    beta_metadata: data.beta_metadata || null,
+    curve: Array.isArray(data.curve) ? data.curve : null,
+    curve_metadata: data.curve_metadata || null,
     model_version: model.name, personalization: model.personalization,
+    units: data.units || null,
+    request_payload: requestPayload || null,
+    response_payload: data || null,
     created_at: new Date().toISOString()
   };
+  session.prediction_snapshot = snapshot;
+  if (!Array.isArray(session.prediction_snapshots)) session.prediction_snapshots = [];
+  session.prediction_snapshots.push(snapshot);
+  if (session.prediction_snapshots.length > 10) session.prediction_snapshots = session.prediction_snapshots.slice(-10);
+  session.profile_snapshot = buildProfileSnapshot(profile, r);
   session.updated_at = new Date().toISOString();
   SaferSessionStorage.updateSession(session);
 
-  // Graph — FIXED formula: A / (weight_kg * 10 * r)
-  updateGraph(est, beta, summary.elapsed, r, profile.weightKg, summary.grams);
+  // Backend curve points are authoritative when present.
+  if (backendCurve.length > 0) {
+    updateGraphFromBackendCurve(backendCurve, summary.elapsed, est);
+  } else {
+    updateGraph(est, beta, summary.elapsed, r, profile.weightKg, summary.grams);
+  }
 }
 
 function setStatus(msg, type) {
@@ -679,29 +787,48 @@ function resetGraph() {
   document.getElementById('curveArea').setAttribute('d', 'M0 180 L520 180 Z');
   document.getElementById('currentDot').setAttribute('visibility', 'hidden');
   document.getElementById('currentDotRing').setAttribute('visibility', 'hidden');
+  setGraphXLabels(6);
 }
 
-function updateGraph(bac, beta, hours, r, weightKg, gramsAlcohol) {
-  var svgH = 180, maxBAC = 0.20, totalH = 6, steps = 60;
+function axisHourLabel(hour) {
+  if (hour >= 10) return Math.round(hour) + 'h';
+  return (Math.round(hour * 10) / 10).toString().replace(/\.0$/, '') + 'h';
+}
+
+function setGraphXLabels(totalH) {
+  var labels = document.querySelectorAll('.graph-x-labels span');
+  var count = labels.length || 1;
+  labels.forEach(function(label, index) {
+    var hour = count === 1 ? 0 : (index / (count - 1)) * totalH;
+    label.textContent = axisHourLabel(hour);
+  });
+}
+
+function drawCurve(points, currentHour, currentBac) {
+  if (!points || points.length === 0) { resetGraph(); return; }
+  var svgH = 180;
+  var totalH = Math.max(6, points[points.length - 1].hour || 0, currentHour || 0);
+  var maxObserved = Math.max.apply(null, points.map(function(p) { return Math.max(p.high || 0, p.estimate || 0); }).concat([currentBac || 0, 0.20]));
+  var maxBAC = Math.max(0.20, maxObserved * 1.1);
+  setGraphXLabels(totalH);
+
   function toY(b) { return svgH - 10 - Math.min(1, Math.max(0, b / maxBAC)) * (svgH - 20); }
+  function toX(h) { return Math.min(520, Math.max(0, (h / totalH) * 520)); }
 
   var pathD = '', areaD = '';
-  for (var i = 0; i <= steps; i++) {
-    var t = (i / steps) * totalH;
-    // CORRECT Widmark formula
-    var b = Math.max(0, gramsAlcohol / (weightKg * 10 * r) - beta * t);
-    var x = (i / steps) * 520;
-    var y = toY(b);
-    if (i === 0) { pathD = 'M' + x + ' ' + y; areaD = 'M' + x + ' ' + y; }
-    else         { pathD += ' L' + x + ' ' + y; areaD += ' L' + x + ' ' + y; }
-  }
+  points.forEach(function(point, index) {
+    var x = toX(point.hour);
+    var y = toY(point.estimate);
+    if (index === 0) { pathD = 'M' + x + ' ' + y; areaD = 'M' + x + ' ' + y; }
+    else             { pathD += ' L' + x + ' ' + y; areaD += ' L' + x + ' ' + y; }
+  });
   areaD += ' L520 ' + svgH + ' L0 ' + svgH + ' Z';
 
   document.getElementById('curveLine').setAttribute('d', pathD);
   document.getElementById('curveArea').setAttribute('d', areaD);
 
-  var cx = (hours / totalH) * 520;
-  var cy = toY(bac);
+  var cx = toX(currentHour || 0);
+  var cy = toY(currentBac || 0);
   var dot  = document.getElementById('currentDot');
   var ring = document.getElementById('currentDotRing');
   dot.setAttribute('cx', cx); dot.setAttribute('cy', cy);
@@ -709,9 +836,25 @@ function updateGraph(bac, beta, hours, r, weightKg, gramsAlcohol) {
   dot.setAttribute('visibility', 'visible');
   ring.setAttribute('visibility', 'visible');
 
-  var c = bac < 0.05 ? '#C8F04D' : bac < 0.08 ? '#FFB347' : '#FF6B6B';
+  var c = currentBac < 0.05 ? '#C8F04D' : currentBac < 0.08 ? '#FFB347' : '#FF6B6B';
   document.getElementById('curveLine').setAttribute('stroke', c);
   dot.setAttribute('fill', c);
+}
+
+function updateGraphFromBackendCurve(curve, currentHour, currentBac) {
+  drawCurve(curve, currentHour, currentBac);
+}
+
+function updateGraph(bac, beta, hours, r, weightKg, gramsAlcohol) {
+  // Legacy fallback for older backend responses without curve points.
+  var totalH = Math.max(6, hours || 0), steps = 60;
+  var points = [];
+  for (var i = 0; i <= steps; i++) {
+    var t = (i / steps) * totalH;
+    var b = Math.max(0, gramsAlcohol / (weightKg * 10 * r) - beta * t);
+    points.push({ hour: t, estimate: b, low: b, high: b });
+  }
+  drawCurve(points, hours, bac);
 }
 
 /* ── Init ── */
