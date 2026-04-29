@@ -10,10 +10,13 @@ Unit contract used throughout this module:
 - r: dimensionless distribution ratio
 
 Modeling approach:
-- r is estimated via linear regression on sex, age, weight, height, body fat bracket
-  (coefficients derived from NHANES body composition data; see AGENTS.md)
-- beta uses a Bayesian shrinkage estimator: population prior (mean=0.015, sd=0.0025)
-  updated with session-implied betas from post-session review data.
+- r estimates alcohol distribution volume / body-water availability using a
+  sex-selected formula branch plus age, weight, height, and a broad internal
+  body-fat bucket. The API derives that bucket from noisy body-fat percent input
+  to avoid false precision.
+- beta estimates alcohol elimination rate from age, BMI, drinks/week, and a
+  Bayesian update from usable session-implied betas. It intentionally does not
+  use sex or body-fat percent.
   As sessions accumulate, personal history progressively dominates population prior.
 - BAC range uses conservative perturbation of r and beta to bound uncertainty.
 """
@@ -38,8 +41,9 @@ MAX_BETA_PER_HOUR     = 0.030
 PRIOR_SESSION_WEIGHT  = 10.0
 
 # ── r regression coefficients (NHANES-derived linear model) ───────────────
-# Predicts Widmark r from: intercept, age, weight(kg), height(cm), fat bracket
-# Fat bracket: low / mid add a positive bump; high (default) adds nothing.
+# Predicts Widmark r from sex-selected intercept, age, weight(kg), height(cm),
+# and universal internal fat buckets. Buckets are model robustness inputs, not
+# medical or fitness categories; high/default adds nothing.
 m_i      = 0.3901319484;  m_age    = 0.0003273190;  m_weight = -0.0009810014
 m_height = 0.0011555900;  m_low    = 0.1173256496;  m_mid    = 0.0633215674
 
@@ -116,14 +120,15 @@ def r_coefficient(
     height: float,
     fat: str | None = None,
 ) -> float:
-    """Estimate Widmark r via linear regression on demographics.
+    """Estimate Widmark r via linear regression on body-water signals.
 
     Args:
         gender: 'm'/'male', 'f'/'female', or any other value → neutral model.
         age:    Years. Must be positive.
         weight: Kilograms. Must be positive.
         height: Centimeters. Must be positive.
-        fat:    Body fat bracket — 'low', 'mid'/'medium', 'high', or None.
+        fat:    Internal body-fat bucket — 'low', 'mid'/'medium', 'high', or
+                None. The server derives this from user-entered percent.
 
     Returns:
         r clamped to [MIN_R, MAX_R].
@@ -187,7 +192,8 @@ def population_beta_prior(
 
     Applies literature-backed age-band, BMI, and drinking-frequency offsets
     to the population mean. This is the starting estimate for a new user
-    before any personal session data exists.
+    before any personal session data exists. Sex and body-fat percent are not
+    beta inputs in the current model.
 
     Returns:
         Beta clamped to [MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR].
@@ -574,6 +580,38 @@ def _curve_hours(
     return sorted(set(hours))
 
 
+def _peak_metadata_from_curve(curve: list[dict[str, float]], current_time_hours: float | None) -> dict[str, float | str | None]:
+    """Summarize peak BAC from generated model curve points."""
+    if not curve:
+        return {
+            "peak_bac": None,
+            "peak_bac_hour": None,
+            "peak_status": "unknown",
+            "time_to_peak_hours": None,
+        }
+
+    peak_point = max(curve, key=lambda point: point.get("estimate", 0.0))
+    peak_bac = float(peak_point.get("estimate", 0.0))
+    peak_hour = float(peak_point.get("hour", 0.0))
+    current = current_time_hours if current_time_hours is not None else 0.0
+    if peak_bac <= 0:
+        status = "none"
+        time_to_peak = None
+    elif peak_hour > current + 1e-6:
+        status = "future"
+        time_to_peak = peak_hour - current
+    else:
+        status = "already_reached"
+        time_to_peak = 0.0
+
+    return {
+        "peak_bac": round(peak_bac, 6),
+        "peak_bac_hour": round(peak_hour, 4),
+        "peak_status": status,
+        "time_to_peak_hours": None if time_to_peak is None else round(time_to_peak, 4),
+    }
+
+
 def generate_event_aware_bac_curve(
     drink_events: Iterable[Any] | None,
     weight_kg: float,
@@ -601,6 +639,10 @@ def generate_event_aware_bac_curve(
         return {
             "curve": [],
             "current_bac": None,
+            "peak_bac": None,
+            "peak_bac_hour": None,
+            "peak_status": "unknown",
+            "time_to_peak_hours": None,
             "estimated_near_zero_hour": None,
             "metadata": {
                 "source": "legacy_total_grams",
@@ -678,6 +720,7 @@ def generate_event_aware_bac_curve(
             "high": round(values["high"], 6),
         })
 
+    peak_metadata = _peak_metadata_from_curve(curve, current)
     current_values = (
         calculate_event_aware_bac_range(
             events,
@@ -694,6 +737,7 @@ def generate_event_aware_bac_curve(
     return {
         "curve": curve,
         "current_bac": current_values,
+        **peak_metadata,
         "estimated_near_zero_hour": near_zero_hour,
         "metadata": {
             "source": "event_aware",
@@ -751,8 +795,10 @@ def generate_legacy_bac_curve(
             "high": round(values["high"], 6),
         })
 
+    peak_metadata = _peak_metadata_from_curve(curve, current)
     return {
         "curve": curve,
+        **peak_metadata,
         "estimated_near_zero_hour": near_zero_hour,
         "metadata": {
             "source": "legacy_total_grams",

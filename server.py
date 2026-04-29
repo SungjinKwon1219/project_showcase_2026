@@ -35,6 +35,8 @@ MODEL_STATUS          = "scaffold"
 COEFFICIENT_SOURCE    = "nhanes_derived_linear_regression"
 PERSONALIZATION_STATUS_ACTIVE  = "bayesian_shrinkage_active"
 PERSONALIZATION_STATUS_NONE    = "not_enabled"
+MIN_BODY_FAT_PERCENT  = 3.0
+MAX_BODY_FAT_PERCENT  = 65.0
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────
@@ -58,10 +60,42 @@ def _first_present(mapping: dict[str, Any], names: list[str]) -> Any:
             return mapping.get(name)
     return None
 
-def _body_fat_bracket_from_percent(body_fat_percent: float) -> str:
-    if body_fat_percent < 15:  return "low"
-    if body_fat_percent <= 25: return "mid"
+def body_fat_bucket_from_percent(body_fat_percent: float) -> str:
+    """Map noisy user-entered body-fat percent to universal model buckets.
+
+    These are internal robustness buckets, not medical or fitness categories.
+    Sex already selects the r formula branch, so the bucket thresholds are
+    intentionally universal to avoid double-counting sex-based assumptions.
+    """
+    if body_fat_percent < 15.0:  return "low"
+    if body_fat_percent <= 25.0: return "mid"
     return "high"
+
+def _normalize_legacy_body_fat_bracket(value: Any) -> str:
+    if value is None:
+        return "high"
+    normalized = str(value).strip().lower()
+    if normalized == "low": return "low"
+    if normalized in {"mid", "medium"}: return "mid"
+    return "high"
+
+def derive_body_fat_bracket(profile: dict[str, Any]) -> str:
+    """Derive the internal r-model fat bucket from API profile data.
+
+    body_fat_percent is the backend source of truth when present. Legacy
+    body_fat_bracket remains supported only when percent is absent.
+    """
+    fat_pct = profile.get("body_fat_percent")
+    if fat_pct is not None:
+        percent = _as_float(fat_pct, "profile.body_fat_percent")
+        if percent < MIN_BODY_FAT_PERCENT or percent > MAX_BODY_FAT_PERCENT:
+            raise ValueError(
+                f"profile.body_fat_percent must be between "
+                f"{MIN_BODY_FAT_PERCENT:g} and {MAX_BODY_FAT_PERCENT:g}."
+            )
+        return body_fat_bucket_from_percent(percent)
+
+    return _normalize_legacy_body_fat_bracket(profile.get("body_fat_bracket"))
 
 def _extract_beta_history(history: dict[str, Any]) -> tuple[list[Any], int, list[str]]:
     """Extract old numeric and new metadata-rich implied beta observations."""
@@ -188,8 +222,8 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "age_years":        number,
         "height_cm":        number,
         "weight_kg":        number,
-        "body_fat_bracket": "low" | "mid" | "high",   // optional
-        "body_fat_percent": number,                     // optional, auto-brackets
+        "body_fat_percent": number,                     // preferred, backend bucketed
+        "body_fat_bracket": "low" | "mid" | "high",   // legacy fallback
         "drinks_per_week":  number                      // optional, default 0
       },
       "session": {
@@ -227,10 +261,7 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
     weight   = _as_float(profile.get("weight_kg"),  "profile.weight_kg")
     dpw      = _as_float_optional(profile.get("drinks_per_week"), 0.0)
 
-    fat_bracket = profile.get("body_fat_bracket")
-    fat_pct     = profile.get("body_fat_percent")
-    if fat_bracket is None and isinstance(fat_pct, (int, float)):
-        fat_bracket = _body_fat_bracket_from_percent(float(fat_pct))
+    fat_bracket = derive_body_fat_bracket(profile)
 
     # ── session fields ────────────────────────────────────────────────────
     standard_drinks = session.get("standard_drinks")
@@ -254,7 +285,9 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if grams_alcohol < 0:  raise ValueError("session.grams_alcohol cannot be negative.")
     if hours_elapsed < 0:  raise ValueError("session.hours_elapsed cannot be negative.")
 
-    # ── r estimation (regression) ─────────────────────────────────────────
+    # ── r estimation (distribution/body-water coefficient) ────────────────
+    # Sex selects the formula branch. Body-fat percent is noisy user-entered
+    # data, so the backend converts it into broad universal buckets for r.
     r = r_coefficient(
         gender=str(sex),
         age=age,
@@ -264,6 +297,8 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
     )
 
     # ── beta estimation (demographic prior + Bayesian personalization) ─────
+    # Beta models elimination rate. It intentionally uses age, BMI,
+    # drinks/week, and usable implied-beta history, not sex or body fat.
     demographic_population_beta = population_beta_prior(
         age=age,
         weight_kg=weight,
@@ -342,6 +377,7 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "name":                MODEL_NAME,
             "status":              MODEL_STATUS,
             "r":                   round(r, 6),
+            "body_fat_bracket":    fat_bracket,
             "beta_per_hour":       round(beta_per_hour, 6),
             "beta_source":         beta_metadata["source"],
             "coefficient_source":  COEFFICIENT_SOURCE,
@@ -354,9 +390,15 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "beta_metadata": beta_metadata,
         "bac": {
             "low":      round(float(bac["low"]),      6),
+            "current":  round(float(bac["estimate"]), 6),
             "estimate": round(float(bac["estimate"]), 6),
             "high":     round(float(bac["high"]),     6),
         },
+        "current_bac": round(float(bac["estimate"]), 6),
+        "peak_bac": None if not curve_result or curve_result.get("peak_bac") is None else round(float(curve_result["peak_bac"]), 6),
+        "peak_bac_hour": None if not curve_result or curve_result.get("peak_bac_hour") is None else round(float(curve_result["peak_bac_hour"]), 4),
+        "peak_status": None if not curve_result else curve_result.get("peak_status"),
+        "time_to_peak_hours": None if not curve_result or curve_result.get("time_to_peak_hours") is None else round(float(curve_result["time_to_peak_hours"]), 4),
         "curve": curve_result["curve"] if curve_result else [],
         "curve_metadata": curve_result["metadata"] if curve_result else {
             "source": "unavailable",

@@ -99,7 +99,7 @@ class BACCalculatorTests(unittest.TestCase):
         with_late_drink = event_aware_bac_at_time(
             [
                 {"grams_alcohol": 14, "hours_from_session_start": 0.0},
-                {"grams_alcohol": 14, "hours_from_session_start": 2.0},
+                {"grams_alcohol": 28, "hours_from_session_start": 2.0},
             ],
             t=1.0,
             weight_kg=70.0,
@@ -112,7 +112,7 @@ class BACCalculatorTests(unittest.TestCase):
         event_aware = event_aware_bac_at_time(
             [
                 {"grams_alcohol": 14, "hours_from_session_start": 0.0},
-                {"grams_alcohol": 14, "hours_from_session_start": 2.0},
+                {"grams_alcohol": 28, "hours_from_session_start": 2.0},
             ],
             t=1.0,
             weight_kg=70.0,
@@ -144,6 +144,22 @@ class BACCalculatorTests(unittest.TestCase):
         self.assertEqual(result["metadata"]["source"], "event_aware")
         self.assertEqual([p["hour"] for p in curve], sorted(p["hour"] for p in curve))
         self.assertTrue(all(p["estimate"] >= 0 for p in curve))
+
+    def test_event_aware_curve_reports_peak_from_curve(self) -> None:
+        result = generate_event_aware_bac_curve(
+            [
+                {"grams_alcohol": 14, "hours_from_session_start": 0.0},
+                {"grams_alcohol": 28, "hours_from_session_start": 2.0},
+            ],
+            weight_kg=70.0,
+            r=0.6,
+            beta_per_hour=0.015,
+            current_time_hours=1.0,
+        )
+        peak_from_points = max(point["estimate"] for point in result["curve"])
+        self.assertAlmostEqual(result["peak_bac"], peak_from_points, places=6)
+        self.assertEqual(result["peak_status"], "future")
+        self.assertGreater(result["time_to_peak_hours"], 0)
 
     def test_food_intake_changes_event_aware_curve(self) -> None:
         events = [{"grams_alcohol": 14, "hours_from_session_start": 0.0}]

@@ -118,40 +118,6 @@
 
   .nav-icon { font-size: 1rem; flex-shrink: 0; }
 
-  .sidebar-bottom {
-    margin-top: auto;
-    border-top: 1px solid var(--border);
-    padding-top: 1.25rem;
-  }
-
-  .user-pill {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.65rem 0.75rem;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-
-  .user-pill:hover { background: var(--surface-hover); }
-
-  .user-avatar {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #C8F04D 0%, #5B8DEF 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #0F1A00;
-    flex-shrink: 0;
-  }
-
-  .user-info {}
-  .user-name { font-size: 0.83rem; font-weight: 500; color: var(--text); }
-  .user-email { font-size: 0.72rem; color: var(--muted); }
 
   /* ── MAIN ── */
   .main {
@@ -383,9 +349,6 @@
   .session-meta { flex: 1; }
   .session-name { font-size: 0.85rem; font-weight: 500; color: var(--text); }
   .session-date { font-size: 0.73rem; color: var(--muted); margin-top: 0.1rem; }
-  .session-review-note { font-size: 0.72rem; margin-top: 0.2rem; }
-  .session-review-note a { color: var(--orange); text-decoration: none; font-weight: 600; }
-  .session-review-note a:hover { text-decoration: underline; }
   .session-bac {
     font-family: 'Syne', sans-serif;
     font-weight: 700;
@@ -583,10 +546,9 @@
   @media (max-width: 800px) {
     .sidebar { width: 64px; padding: 1rem 0.75rem; }
     .sidebar-logo span:last-child,
-    .sidebar-section, .user-info,
+    .sidebar-section,
     .nav-item span:last-child { display: none; }
     .nav-item { justify-content: center; padding: 0.65rem; }
-    .user-pill { justify-content: center; }
     .main { margin-left: 64px; padding: 1.5rem; max-width: calc(100vw - 64px); }
     .bottom-grid { grid-template-columns: 1fr; }
   }
@@ -621,15 +583,6 @@
     <span>My Profile</span>
   </a>
 
-  <div class="sidebar-bottom">
-    <div class="user-pill">
-      <div class="user-avatar">IL</div>
-      <div class="user-info">
-        <div class="user-name">Irayna L.</div>
-        <div class="user-email">irayna@ucsb.edu</div>
-      </div>
-    </div>
-  </div>
 </aside>
 
 <!-- ── MAIN ── -->
@@ -643,11 +596,11 @@
 
   <div class="topbar">
     <div class="page-heading">
-      <h1>Welcome back, Irayna</h1>
-      <p>Monday, February 23, 2026 · Static demo context is labeled; real values come from saved prediction snapshots.</p>
+      <h1 id="welcomeHeading">Welcome</h1>
+      <p id="welcomeSub">Complete your profile and log a session to populate dashboard values.</p>
     </div>
     <div class="topbar-actions">
-      <button class="btn-sm btn-sm-ghost">Export CSV</button>
+      <button class="btn-sm btn-sm-ghost" id="exportSessionsBtn" type="button">Export CSV</button>
       <a href="bac-calculator.html"><button class="btn-sm btn-sm-accent">+ New Session</button></a>
     </div>
   </div>
@@ -656,27 +609,27 @@
   <div class="metrics-row">
     <div class="metric-card">
       <div class="metric-glow" style="background: var(--accent);"></div>
-      <div class="metric-label">Static Demo Peak BAC</div>
-      <div class="metric-val warn">0.094</div>
-      <div class="metric-change">Static demo context, not session-derived yet</div>
+      <div class="metric-label">Profile Status</div>
+      <div class="metric-val" id="profileStatusValue">—</div>
+      <div class="metric-change" id="profileStatusDetail">No profile exists yet.</div>
     </div>
     <div class="metric-card">
       <div class="metric-glow" style="background: var(--blue);"></div>
-      <div class="metric-label">Demo Sessions Logged</div>
-      <div class="metric-val">5</div>
-      <div class="metric-change">Placeholder until fitted model is added</div>
+      <div class="metric-label">Sessions Saved</div>
+      <div class="metric-val" id="sessionsSavedValue">—</div>
+      <div class="metric-change" id="sessionsSavedDetail">No saved sessions yet.</div>
     </div>
     <div class="metric-card">
       <div class="metric-glow" style="background: #C8F04D;"></div>
-      <div class="metric-label">Demo r̂ Scaffold</div>
-      <div class="metric-val safe">0.61</div>
-      <div class="metric-change">Placeholder coefficient context</div>
+      <div class="metric-label">Peak BAC</div>
+      <div class="metric-val" id="peakBacValue">—</div>
+      <div class="metric-change" id="peakBacDetail">No saved session estimate yet.</div>
     </div>
     <div class="metric-card">
       <div class="metric-glow" style="background: var(--orange);"></div>
-      <div class="metric-label">Demo β̂ Rate</div>
-      <div class="metric-val">0.0153</div>
-      <div class="metric-change">Model personalization not enabled</div>
+      <div class="metric-label">Personalization</div>
+      <div class="metric-val" id="personalizationValue">—</div>
+      <div class="metric-change" id="personalizationDetail">Personalization not available yet.</div>
     </div>
   </div>
 
@@ -686,13 +639,13 @@
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">Static Demo BAC History</div>
-          <div class="card-sub">Static demo context, not session-derived yet</div>
+          <div class="card-title">BAC History</div>
+          <div class="card-sub" id="bacHistorySub">Saved session estimates over time</div>
         </div>
-        <span class="pill pill-green">Demo context</span>
+        <span class="pill pill-green" id="bacHistoryPill">Session-derived</span>
       </div>
       <div class="graph-wrap">
-        <svg viewBox="0 0 560 200" preserveAspectRatio="none">
+        <svg viewBox="0 0 560 200" preserveAspectRatio="none" id="bacHistorySvg">
           <defs>
             <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="#C8F04D" stop-opacity="0.2"/>
@@ -711,22 +664,11 @@
           <!-- Common 0.08 BAC driving threshold marker -->
           <line x1="0" y1="96" x2="560" y2="96" stroke="rgba(255,107,107,0.3)" stroke-width="1" stroke-dasharray="6,4"/>
           <text x="8" y="91" font-size="9" fill="rgba(255,107,107,0.6)" font-family="DM Sans">0.08</text>
-          <!-- Area -->
-          <path d="M 40 160 L 140 140 L 240 110 L 340 125 L 440 100 L 520 112 L 520 190 L 40 190 Z" fill="url(#histGrad)"/>
-          <!-- Line -->
-          <path d="M 40 160 L 140 140 L 240 110 L 340 125 L 440 100 L 520 112" fill="none" stroke="#C8F04D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <!-- Dots -->
-          <circle cx="40" cy="160" r="4" fill="#C8F04D" opacity="0.7"/>
-          <circle cx="140" cy="140" r="4" fill="#C8F04D" opacity="0.7"/>
-          <circle cx="240" cy="110" r="4" fill="#C8F04D" opacity="0.7"/>
-          <circle cx="340" cy="125" r="4" fill="#C8F04D" opacity="0.7"/>
-          <circle cx="440" cy="100" r="4" fill="#C8F04D"/>
-          <circle cx="440" cy="100" r="8" fill="rgba(200,240,77,0.2)"/>
-          <circle cx="520" cy="112" r="5" fill="#C8F04D" filter="drop-shadow(0 0 6px #C8F04D)"/>
+          <g id="bacHistorySeries"></g>
         </svg>
       </div>
-      <div class="graph-x-labels">
-        <span>Jan 4</span><span>Jan 11</span><span>Jan 18</span><span>Jan 25</span><span>Feb 2</span><span>Feb 23</span>
+      <div class="graph-x-labels" id="bacHistoryLabels">
+        <span>—</span><span>—</span><span>—</span><span>—</span><span>—</span><span>—</span>
       </div>
     </div>
 
@@ -746,66 +688,39 @@
   <!-- BOTTOM ROW -->
   <div class="bottom-grid">
 
-    <!-- Model confidence -->
+    <!-- Model personalization -->
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">Scaffold r̂ Confidence</div>
-          <div class="card-sub">Placeholder until fitted model is added</div>
+          <div class="card-title">Model Personalization</div>
+          <div class="card-sub">Not implemented yet</div>
         </div>
       </div>
       <div class="radial-wrap">
         <svg width="140" height="140" viewBox="0 0 140 140">
           <circle cx="70" cy="70" r="56" fill="none" stroke="var(--border)" stroke-width="10"/>
-          <circle cx="70" cy="70" r="56" fill="none" stroke="#C8F04D" stroke-width="10"
-            stroke-dasharray="351.86" stroke-dashoffset="105" stroke-linecap="round"
-            style="filter: drop-shadow(0 0 8px rgba(200,240,77,0.5))"/>
+          <circle cx="70" cy="70" r="56" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="10"
+            stroke-dasharray="351.86" stroke-dashoffset="351.86" stroke-linecap="round"/>
         </svg>
         <div class="radial-center">
-          <div class="radial-val">70%</div>
-          <div class="radial-label">demo</div>
+          <div class="radial-val">—</div>
+          <div class="radial-label">Unavailable</div>
         </div>
       </div>
       <p style="font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 0.5rem;">
-        Model personalization not enabled; future fitted models can replace this card.
+        Personalization is not implemented yet. Future versions may use validated post-session feedback to calibrate estimates.
       </p>
     </div>
 
-    <!-- Pre-session context -->
+    <!-- Session context -->
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">Demo Session Context</div>
-          <div class="card-sub">Static demo context, not applied to current model</div>
-        </div>
-        <span class="pill pill-orange">Demo context</span>
-      </div>
-      <div class="context-row">
-        <div class="context-item">
-          <span class="context-icon">Sleep</span>
-          <div class="context-meta">
-            <div class="context-name">Sleep</div>
-            <div class="context-val">5.5 hrs · placeholder δ₁ = −0.002</div>
-            <div class="progress-bar" style="margin-top: 0.4rem;"><div class="progress-fill" style="width: 46%; background: var(--orange);"></div></div>
-          </div>
-        </div>
-        <div class="context-item">
-          <span class="context-icon">Hydration</span>
-          <div class="context-meta">
-            <div class="context-name">Hydration</div>
-            <div class="context-val">Moderate · placeholder δ₂ = +0.001</div>
-            <div class="progress-bar"><div class="progress-fill" style="width: 60%; background: var(--blue);"></div></div>
-          </div>
-        </div>
-        <div class="context-item">
-          <span class="context-icon">Food</span>
-          <div class="context-meta">
-            <div class="context-name">Food consumed</div>
-            <div class="context-val">Ate ~4hrs prior · placeholder δ₃ = −0.001</div>
-            <div class="progress-bar"><div class="progress-fill" style="width: 35%; background: var(--red);"></div></div>
-          </div>
+          <div class="card-title">Session Context</div>
+          <div class="card-sub">Not available yet</div>
         </div>
       </div>
+      <div class="context-row" id="sessionContextBody"></div>
     </div>
 
     <!-- Threshold reference -->
@@ -813,15 +728,14 @@
       <div class="card-header">
         <div>
           <div class="card-title">Threshold Reference</div>
-          <div class="card-sub">Static demo estimate, not a drinking recommendation</div>
+          <div class="card-sub">Estimate only; not legal or medical advice</div>
         </div>
-        <span class="pill pill-green">Scaffold estimate</span>
       </div>
       <div style="text-align: center; padding: 1.5rem 0 1rem;">
-        <div style="font-family: 'Syne', sans-serif; font-weight: 800; font-size: 3.5rem; color: var(--accent); letter-spacing: -3px; line-height: 1;">3–4</div>
-        <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem;">estimated standard drinks, relative to the common 0.08 BAC driving threshold</div>
+        <div style="font-family: 'Syne', sans-serif; font-weight: 800; font-size: 3.5rem; color: var(--accent); letter-spacing: -3px; line-height: 1;">—</div>
+        <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.3rem;">Not enough information to estimate a personal threshold yet.</div>
         <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.75rem; padding: 0.6rem; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid var(--border);">
-          Static demo context: r̂=0.61, β̂=0.0153.<br>Model personalization not enabled.
+          Estimate only; not legal or medical advice. Do not use this to decide whether to drive.
         </div>
       </div>
       <a href="bac-calculator.html"><button class="btn-sm btn-sm-accent" style="width: 100%; border-radius: 12px; padding: 0.75rem; font-size: 0.9rem;">Start Logging →</button></a>
@@ -832,132 +746,382 @@
 
 <script src="session-storage.js"></script>
 <script>
-  (function persistSummaryInit() {
+  var PROFILE_KEY = 'safer_user_profile';
+  var SESSIONS_KEY = 'safer_sessions';
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function finiteNumber(value) {
+    var n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function readSavedProfile() {
+    try {
+      if (typeof SaferSessionStorage !== 'undefined' && typeof SaferSessionStorage.getProfile === 'function') {
+        return SaferSessionStorage.getProfile();
+      }
+      var raw = localStorage.getItem(PROFILE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function hasCompletedProfile(profile) {
+    if (!profile || typeof profile !== 'object') return false;
+    var sexOk = profile.sex === 'male' || profile.sex === 'female';
+    var ageOk = Boolean(profile.age_band) || finiteNumber(profile.age_years) != null;
+    var heightOk = finiteNumber(profile.height_in) != null || finiteNumber(profile.height_cm) != null;
+    var weightOk = finiteNumber(profile.weight_lbs) != null || finiteNumber(profile.weight_kg) != null;
+    var bodyFatOk = finiteNumber(profile.body_fat_percent) != null;
+    return sexOk && ageOk && heightOk && weightOk && bodyFatOk;
+  }
+
+  function getProfileDisplayName(profile) {
+    var name = profile && typeof profile.name === 'string' ? profile.name.trim() : '';
+    return name || '';
+  }
+
+  function readSavedSessions() {
+    try {
+      if (typeof SaferSessionStorage !== 'undefined' && typeof SaferSessionStorage.getSessions === 'function') {
+        return SaferSessionStorage.getSessions().slice();
+      }
+      var raw = localStorage.getItem(SESSIONS_KEY);
+      if (!raw) return [];
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function formatWhen(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (!Number.isFinite(d.getTime())) return '—';
+    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  function formatShortDate(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (!Number.isFinite(d.getTime())) return '—';
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function allPredictionSnapshots(session) {
+    var snapshots = [];
+    if (session && Array.isArray(session.prediction_snapshots)) snapshots = snapshots.concat(session.prediction_snapshots);
+    if (session && session.prediction_snapshot) snapshots.push(session.prediction_snapshot);
+    return snapshots.filter(function (snap) { return snap && typeof snap === 'object'; }).sort(function (a, b) {
+      var ta = new Date(a.created_at || 0).getTime();
+      var tb = new Date(b.created_at || 0).getTime();
+      return ta - tb;
+    });
+  }
+
+  function snapshotEstimate(snap) {
+    if (!snap) return null;
+    var estimate = finiteNumber(snap.bac_estimate);
+    if (estimate == null) estimate = finiteNumber(snap.estimate);
+    if (estimate == null && snap.bac) estimate = finiteNumber(snap.bac.estimate);
+    if (estimate == null && snap.response_payload && snap.response_payload.bac) {
+      estimate = finiteNumber(snap.response_payload.bac.estimate);
+    }
+    if (estimate == null) return null;
+    var low = finiteNumber(snap.bac_low);
+    var high = finiteNumber(snap.bac_high);
+    if (snap.bac) {
+      if (low == null) low = finiteNumber(snap.bac.low);
+      if (high == null) high = finiteNumber(snap.bac.high);
+    }
+    return {
+      estimate: estimate,
+      low: low,
+      high: high,
+      created_at: snap.created_at || null
+    };
+  }
+
+  function getLatestSessionEstimate(session) {
+    var snapshots = allPredictionSnapshots(session);
+    for (var i = snapshots.length - 1; i >= 0; i--) {
+      var estimate = snapshotEstimate(snapshots[i]);
+      if (estimate) return estimate;
+    }
+    return null;
+  }
+
+  function getSessionPeakEstimate(session) {
+    var snapshots = allPredictionSnapshots(session);
+    var best = null;
+    snapshots.forEach(function (snap) {
+      var peak = finiteNumber(snap.peak_bac);
+      if (peak == null && snap.response_payload) peak = finiteNumber(snap.response_payload.peak_bac);
+      if (peak == null) {
+        var latest = snapshotEstimate(snap);
+        peak = latest ? latest.estimate : null;
+      }
+      if (peak != null && (best == null || peak > best)) best = peak;
+    });
+    return best;
+  }
+
+  function formatBacRangeOrValue(estimate) {
+    if (!estimate) return 'No estimate yet';
+    if (estimate.low != null && estimate.high != null && estimate.low !== estimate.high) {
+      return estimate.low.toFixed(3) + '-' + estimate.high.toFixed(3);
+    }
+    return estimate.estimate.toFixed(3);
+  }
+
+  function formatSessionStatus(session) {
+    if (!session) return 'Unknown';
+    if (session.status === 'completed') return 'Completed';
+    if (session.status === 'draft') return 'Active';
+    return session.status ? String(session.status).replace(/_/g, ' ') : 'Unknown';
+  }
+
+  function renderEmptyState(title, message, linkText, linkHref) {
+    return '<div class="recent-sessions-empty">' +
+      '<h3>' + esc(title) + '</h3>' +
+      '<p>' + esc(message) + '</p>' +
+      (linkText && linkHref ? '<a href="' + esc(linkHref) + '">' + esc(linkText) + '</a>' : '') +
+      '</div>';
+  }
+
+  function updateMetric(valueId, detailId, value, detail, tone) {
+    var valueEl = document.getElementById(valueId);
+    var detailEl = document.getElementById(detailId);
+    if (!valueEl || !detailEl) return;
+    valueEl.textContent = value;
+    valueEl.className = 'metric-val' + (tone ? ' ' + tone : '');
+    detailEl.textContent = detail;
+  }
+
+  function renderHeader(profile, hasProfile) {
+    var name = getProfileDisplayName(profile);
+    document.getElementById('welcomeHeading').textContent = name ? 'Welcome back, ' + name : 'Welcome';
+    document.getElementById('welcomeSub').textContent = hasProfile
+      ? 'Dashboard values come from your saved profile and session history on this device.'
+      : 'No profile exists yet. Complete your profile to personalize dashboard values.';
+  }
+
+  function renderProfileCallout(hasProfile) {
+    var callout = document.getElementById('profileCallout');
+    if (!callout) return;
+    callout.classList.toggle('visible', !hasProfile);
+  }
+
+  function renderPersistSummary(hasProfile, sessions) {
     var el = document.getElementById('persistSummary');
     if (!el) return;
-    var hasProfile = false;
-    try {
-      hasProfile = !!localStorage.getItem('safer_user_profile');
-    } catch (e1) { /* ignore */ }
-    var nSessions = 0;
-    try {
-      nSessions = typeof SaferSessionStorage !== 'undefined' ? SaferSessionStorage.getSessions().length : 0;
-    } catch (e2) { /* ignore */ }
     var parts = [
       '<strong>Profile:</strong> ' + (hasProfile ? 'saved on this device' : 'not set') +
         (hasProfile ? '' : ' · <a href="input.html">Add profile</a>'),
-      '<strong>Sessions saved:</strong> ' + nSessions
+      '<strong>Sessions saved:</strong> ' + sessions.length
     ];
-    if (nSessions === 0) {
-      parts.push('<span style="flex-basis:100%; margin-top:0.25rem;">No drinking sessions yet — <a href="bac-calculator.html">start one on the BAC Calculator</a>.</span>');
+    if (sessions.length === 0) {
+      parts.push('<span style="flex-basis:100%; margin-top:0.25rem;">No saved sessions yet. <a href="bac-calculator.html">Start one on the BAC Calculator</a>.</span>');
     }
     el.innerHTML = parts.join(' <span style="color:var(--border-bright);">·</span> ');
-  })();
+  }
 
-  (function profileCalloutInit() {
-    try {
-      if (!localStorage.getItem('safer_user_profile')) {
-        document.getElementById('profileCallout').classList.add('visible');
-      }
-    } catch (e) { /* ignore */ }
-  })();
+  function renderMetrics(profile, hasProfile, sessions) {
+    updateMetric(
+      'profileStatusValue',
+      'profileStatusDetail',
+      hasProfile ? 'Profile saved' : 'No profile',
+      hasProfile ? 'Saved profile found on this device.' : 'No profile exists yet.',
+      hasProfile ? 'safe' : ''
+    );
+    updateMetric(
+      'sessionsSavedValue',
+      'sessionsSavedDetail',
+      String(sessions.length),
+      sessions.length ? 'Actual saved session count.' : 'No saved sessions yet.',
+      sessions.length ? 'safe' : ''
+    );
 
-  (function recentSessionsInit() {
+    var peak = null;
+    sessions.forEach(function (session) {
+      var p = getSessionPeakEstimate(session);
+      if (p != null && (peak == null || p > peak)) peak = p;
+    });
+    updateMetric(
+      'peakBacValue',
+      'peakBacDetail',
+      peak == null ? '—' : peak.toFixed(3),
+      peak == null ? 'No saved session estimate yet.' : 'Highest saved session peak estimate.',
+      peak == null ? '' : (peak < 0.08 ? 'safe' : peak < 0.15 ? 'warn' : 'danger')
+    );
+
+    updateMetric(
+      'personalizationValue',
+      'personalizationDetail',
+      '—',
+      'Personalization not available yet.',
+      ''
+    );
+  }
+
+  function renderRecentSessions(sessions) {
     var body = document.getElementById('recentSessionsBody');
     var header = document.getElementById('recentSessionsHeader');
     if (!body || !header) return;
+    var sorted = sessions.slice().sort(function (a, b) {
+      return new Date((b && b.started_at) || 0).getTime() - new Date((a && a.started_at) || 0).getTime();
+    }).slice(0, 5);
 
-    var sessions = [];
-    try {
-      if (typeof SaferSessionStorage !== 'undefined') {
-        sessions = SaferSessionStorage.getSessions().slice();
-      } else {
-        var raw = localStorage.getItem('safer_sessions');
-        if (raw) sessions = JSON.parse(raw);
-        if (!Array.isArray(sessions)) sessions = [];
-      }
-    } catch (e) {
-      sessions = [];
-    }
-
-    sessions.sort(function (a, b) {
-      var ta = new Date((a && a.started_at) || 0).getTime();
-      var tb = new Date((b && b.started_at) || 0).getTime();
-      return tb - ta;
-    });
-
-    var top = sessions.slice(0, 5);
-
-    function formatWhen(iso) {
-      if (!iso) return '—';
-      try {
-        var d = new Date(iso);
-        return isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-      } catch (e2) {
-        return '—';
-      }
-    }
-
-    function esc(s) {
-      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    function isReviewPending(s) {
-      if (typeof SaferSessionStorage !== 'undefined' && typeof SaferSessionStorage.isReviewPending === 'function') {
-        return SaferSessionStorage.isReviewPending(s);
-      }
-      return s && s.status === 'completed' && s.review_status !== 'completed' && !s.post_session_review;
-    }
-
-    if (top.length === 0) {
+    if (sorted.length === 0) {
       header.hidden = true;
-      body.innerHTML =
-        '<div class="recent-sessions-empty">' +
-          '<h3>No sessions yet</h3>' +
-          '<p>Start your first session to begin tracking.</p>' +
-          '<a href="bac-calculator.html">Start session</a>' +
-        '</div>';
+      body.innerHTML = renderEmptyState('No sessions yet', 'No saved sessions yet. Log a session to populate this card.', 'Start session', 'bac-calculator.html');
       return;
     }
 
     header.hidden = false;
-    var n = top.length;
-    body.innerHTML = top.map(function (s, i) {
-      var label = s && s.title ? s.title : ('Session ' + (i + 1));
-      var st = (s && s.status) ? esc(s.status) : '—';
-      var events = Array.isArray(s.events) ? s.events : [];
-      var drinkEvents = events.filter(function (e) { return e && e.event_type === 'drink'; });
-      var snap = s && s.prediction_snapshot ? s.prediction_snapshot : null;
-      var pendingReview = isReviewPending(s);
-      var extra = snap
-        ? ('Latest session estimate ' + Number(snap.bac_low).toFixed(3) + '-' + Number(snap.bac_high).toFixed(3))
-        : ('Drink events: ' + drinkEvents.length);
-      var reviewLink = pendingReview
-        ? '<div class="session-review-note"><a href="history.html">Review pending</a></div>'
-        : '';
-      return (
-        '<div class="session-item">' +
-          '<div class="session-icon" style="background: rgba(200,240,77,0.1);">Session</div>' +
-          '<div class="session-meta">' +
-            '<div class="session-name">' + esc(label) + '</div>' +
-            '<div class="session-date">' + formatWhen(s.started_at) + ' · ' + esc(extra) + '</div>' +
-            reviewLink +
-          '</div>' +
-          '<span class="session-status-pill">' + st + '</span>' +
-        '</div>'
-      );
+    body.innerHTML = sorted.map(function (session, index) {
+      var title = session && session.title ? session.title : 'Session ' + (index + 1);
+      var events = Array.isArray(session.events) ? session.events : [];
+      var drinkCount = events.filter(function (event) { return event && event.event_type === 'drink'; }).length;
+      var estimate = getLatestSessionEstimate(session);
+      var estimateText = formatBacRangeOrValue(estimate);
+      return '<div class="session-item">' +
+        '<div class="session-icon" style="background: rgba(200,240,77,0.1);">Session</div>' +
+        '<div class="session-meta">' +
+          '<div class="session-name">' + esc(title) + '</div>' +
+          '<div class="session-date">' + formatWhen(session && session.started_at) + ' · ' + drinkCount + ' drink event' + (drinkCount === 1 ? '' : 's') + ' · ' + esc(estimateText) + '</div>' +
+        '</div>' +
+        '<span class="session-status-pill">' + esc(formatSessionStatus(session)) + '</span>' +
+      '</div>';
     }).join('');
-  })();
+  }
 
-  // Animate progress bars on load
-  window.addEventListener('load', () => {
-    const fills = document.querySelectorAll('.progress-fill');
-    fills.forEach(f => {
-      const w = f.style.width;
-      f.style.width = '0';
-      setTimeout(() => { f.style.width = w; }, 400);
+  function renderBacHistory(sessions) {
+    var series = document.getElementById('bacHistorySeries');
+    var labels = document.getElementById('bacHistoryLabels');
+    var sub = document.getElementById('bacHistorySub');
+    var pill = document.getElementById('bacHistoryPill');
+    if (!series || !labels || !sub || !pill) return;
+
+    var points = sessions.map(function (session) {
+      var estimate = getLatestSessionEstimate(session);
+      return estimate ? {
+        value: estimate.estimate,
+        date: session.started_at || estimate.created_at || null
+      } : null;
+    }).filter(Boolean).sort(function (a, b) {
+      return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
     });
-  });
+
+    if (points.length === 0) {
+      series.innerHTML = '<text x="280" y="110" text-anchor="middle" font-size="13" fill="rgba(138,150,176,0.9)" font-family="DM Sans">No BAC history yet. Log a session to see trends over time.</text>';
+      labels.innerHTML = '<span>—</span><span>—</span><span>—</span><span>—</span><span>—</span><span>—</span>';
+      sub.textContent = 'No usable saved BAC estimates yet';
+      pill.textContent = 'Empty';
+      return;
+    }
+
+    sub.textContent = points.length + ' saved estimate' + (points.length === 1 ? '' : 's');
+    pill.textContent = 'Session-derived';
+    var maxVal = Math.max.apply(null, points.map(function (point) { return point.value; }).concat([0.08, 0.12]));
+    var count = points.length;
+    var coords = points.map(function (point, index) {
+      var x = count === 1 ? 280 : 40 + (index / (count - 1)) * 480;
+      var y = 180 - Math.min(1, Math.max(0, point.value / maxVal)) * 150;
+      return { x: x, y: y, value: point.value, date: point.date };
+    });
+    var path = coords.map(function (point, index) {
+      return (index === 0 ? 'M ' : 'L ') + point.x.toFixed(1) + ' ' + point.y.toFixed(1);
+    }).join(' ');
+    var area = path + ' L ' + coords[coords.length - 1].x.toFixed(1) + ' 190 L ' + coords[0].x.toFixed(1) + ' 190 Z';
+    var circles = coords.map(function (point) {
+      return '<circle cx="' + point.x.toFixed(1) + '" cy="' + point.y.toFixed(1) + '" r="4" fill="#C8F04D"/>';
+    }).join('');
+    series.innerHTML =
+      '<path d="' + area + '" fill="url(#histGrad)"/>' +
+      (coords.length > 1 ? '<path d="' + path + '" fill="none" stroke="#C8F04D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' : '') +
+      circles;
+
+    var labelValues = [0, 1, 2, 3, 4, 5].map(function (slot) {
+      var idx = count === 1 ? 0 : Math.round((slot / 5) * (count - 1));
+      return '<span>' + esc(formatShortDate(points[idx].date)) + '</span>';
+    });
+    labels.innerHTML = labelValues.join('');
+  }
+
+  function renderSessionContext(sessions) {
+    var body = document.getElementById('sessionContextBody');
+    if (!body) return;
+    body.innerHTML = renderEmptyState('This feature is not available yet', 'Future versions may summarize validated post-session feedback here.', '', '');
+  }
+
+  function exportSessionsCsv(sessions) {
+    if (!sessions.length) return;
+    var rows = [['session_id', 'title', 'status', 'started_at', 'ended_at', 'drink_events', 'latest_estimate', 'peak_bac']];
+    sessions.forEach(function (session) {
+      var events = Array.isArray(session.events) ? session.events : [];
+      var drinkCount = events.filter(function (event) { return event && event.event_type === 'drink'; }).length;
+      var latest = getLatestSessionEstimate(session);
+      rows.push([
+        session.session_id || '',
+        session.title || '',
+        session.status || '',
+        session.started_at || '',
+        session.ended_at || '',
+        drinkCount,
+        latest ? latest.estimate.toFixed(3) : '',
+        getSessionPeakEstimate(session) == null ? '' : getSessionPeakEstimate(session).toFixed(3)
+      ]);
+    });
+    var csv = rows.map(function (row) {
+      return row.map(function (cell) {
+        return '"' + String(cell).replace(/"/g, '""') + '"';
+      }).join(',');
+    }).join('\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'safer-sessions.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function initDashboard() {
+    var profile = readSavedProfile();
+    var hasProfile = hasCompletedProfile(profile);
+    var sessions = readSavedSessions();
+
+    renderHeader(profile, hasProfile);
+    renderProfileCallout(hasProfile);
+    renderPersistSummary(hasProfile, sessions);
+    renderMetrics(profile, hasProfile, sessions);
+    renderBacHistory(sessions);
+    renderRecentSessions(sessions);
+    renderSessionContext(sessions);
+
+    var exportBtn = document.getElementById('exportSessionsBtn');
+    if (exportBtn) {
+      exportBtn.disabled = sessions.length === 0;
+      exportBtn.title = sessions.length === 0 ? 'No saved sessions to export' : 'Export saved sessions';
+      exportBtn.addEventListener('click', function () { exportSessionsCsv(sessions); });
+    }
+  }
+
+  initDashboard();
 </script>
 </body>
 </html>

@@ -20,11 +20,6 @@
   .nav-item:hover{background:rgba(255,255,255,0.07);color:var(--text);}
   .nav-item.active{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,240,77,0.2);}
   .nav-icon{font-size:1rem;flex-shrink:0;}
-  .sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding-top:1.25rem;}
-  .user-pill{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:10px;}
-  .user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#C8F04D 0%,#5B8DEF 100%);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#0F1A00;flex-shrink:0;}
-  .user-name{font-size:0.83rem;font-weight:500;color:var(--text);}
-  .user-email{font-size:0.72rem;color:var(--muted);}
   .main{margin-left:240px;flex:1;padding:2rem 2.5rem;}
   .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;}
   .page-heading h1{font-family:'Syne',sans-serif;font-weight:700;font-size:1.5rem;letter-spacing:-0.5px;}
@@ -80,9 +75,14 @@
   .results{display:flex;flex-direction:column;gap:1.5rem;}
   .result-hero{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2rem;text-align:center;position:relative;overflow:hidden;}
   .result-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent-glow),transparent);}
+  .result-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;align-items:stretch;text-align:center;}
+  .bac-metric-block{background:rgba(255,255,255,0.035);border:1px solid var(--border);border-radius:18px;padding:1.35rem 1rem;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:188px;}
+  .bac-metric-block.primary{border-color:rgba(200,240,77,0.16);box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);}
   .result-bac-label{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.4rem;}
-  .result-bac-val{font-family:'Syne',sans-serif;font-weight:800;font-size:5rem;letter-spacing:-4px;line-height:1;transition:color 0.4s;}
+  .result-bac-val{font-family:'Syne',sans-serif;font-weight:800;font-size:4.6rem;letter-spacing:-3.5px;line-height:1;transition:color 0.4s;}
   .result-bac-unit{font-size:0.95rem;font-weight:400;color:var(--muted);}
+  .metric-helper{font-size:0.76rem;color:var(--muted-mid);line-height:1.35;margin-top:0.45rem;max-width:220px;}
+  .peak-timing{font-size:0.72rem;color:var(--accent);margin-top:0.4rem;}
   .result-status{display:inline-flex;align-items:center;gap:0.4rem;margin-top:0.85rem;border-radius:100px;padding:0.35rem 1rem;font-size:0.8rem;font-weight:500;}
   .result-status .sdot{width:6px;height:6px;border-radius:50%;}
   .status-safe{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,240,77,0.25);}
@@ -104,12 +104,23 @@
   .graph-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
   .graph-title{font-family:'Syne',sans-serif;font-weight:600;font-size:0.9rem;}
   .graph-sub{font-size:0.73rem;color:var(--muted);margin-top:0.1rem;}
-  .graph-area{height:180px;}
+  .graph-area{height:320px;}
   .graph-area svg{width:100%;height:100%;}
   .graph-x-labels{display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.68rem;color:var(--muted);}
-  .legend{display:flex;gap:1.25rem;margin-top:0.85rem;}
+  .legend{display:flex;gap:1.25rem;margin-top:0.85rem;flex-wrap:wrap;}
   .legend-item{display:flex;align-items:center;gap:0.45rem;font-size:0.73rem;color:var(--muted-mid);}
   .legend-line{width:18px;height:2px;border-radius:1px;}
+  .zone-legend{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.75rem;margin-top:1rem;}
+  .zone-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:0.85rem 0.9rem;min-width:0;position:relative;transition:border-color 0.2s,background 0.2s,box-shadow 0.2s;}
+  .zone-card.active{background:rgba(200,240,77,0.075);border-color:rgba(200,240,77,0.48);box-shadow:0 0 18px rgba(200,240,77,0.12),inset 0 1px 0 rgba(255,255,255,0.05);}
+  .zone-head{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;}
+  .zone-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+  .zone-name{font-size:0.76rem;font-weight:700;color:var(--text);}
+  .zone-card.active .zone-name{color:var(--accent);}
+  .zone-range{font-size:0.68rem;color:var(--muted);margin-bottom:0.4rem;}
+  .zone-symptoms{font-size:0.69rem;color:var(--muted-mid);line-height:1.4;}
+  .zone-current-badge{display:none;margin-top:0.55rem;width:max-content;border-radius:999px;background:var(--accent-dim);border:1px solid rgba(200,240,77,0.3);color:var(--accent);font-size:0.62rem;font-weight:700;letter-spacing:0.35px;text-transform:uppercase;padding:0.18rem 0.48rem;}
+  .zone-card.active .zone-current-badge{display:inline-flex;}
   /* Tip card */
   .tip-card{background:var(--accent-dim);border:1px solid rgba(200,240,77,0.2);border-radius:16px;padding:1.1rem 1.35rem;}
   .tip-text{font-size:0.82rem;color:var(--muted-mid);line-height:1.55;}
@@ -120,11 +131,17 @@
   @media(max-width:1100px){.calc-grid{grid-template-columns:1fr;}}
   @media(max-width:800px){
     .sidebar{width:64px;padding:1rem 0.75rem;}
-    .sidebar-logo span:last-child,.sidebar-section,.user-info,.nav-item span:last-child{display:none;}
+    .sidebar-logo span:last-child,.sidebar-section,.nav-item span:last-child{display:none;}
     .nav-item{justify-content:center;padding:0.65rem;}
-    .user-pill{justify-content:center;}
     .main{margin-left:64px;padding:1.25rem;}
     .field-row{grid-template-columns:1fr;}
+    .result-summary-grid{grid-template-columns:1fr;text-align:center;}
+    .result-bac-val{font-size:4.2rem;}
+    .zone-legend{grid-template-columns:1fr 1fr;}
+  }
+  @media(max-width:520px){
+    .zone-legend{grid-template-columns:1fr;}
+    .graph-area{height:280px;}
   }
 </style>
 </head>
@@ -137,12 +154,6 @@
   <a href="history.html" class="nav-item"><span class="nav-icon">◷</span><span>History</span></a>
   <div class="sidebar-section">Account</div>
   <a href="input.html" class="nav-item"><span class="nav-icon">◉</span><span>My Profile</span></a>
-  <div class="sidebar-bottom">
-    <div class="user-pill">
-      <div class="user-avatar" id="sidebarAvatar">?</div>
-      <div class="user-info"><div class="user-name" id="sidebarName">You</div><div class="user-email">This device</div></div>
-    </div>
-  </div>
 </aside>
 
 <main class="main">
@@ -251,9 +262,21 @@
     <div class="results">
       <!-- Hero BAC display -->
       <div class="result-hero">
-        <div class="result-bac-label">Estimated Current BAC</div>
-        <div class="result-bac-val" id="bacDisplay" style="color:var(--accent);">—</div>
-        <div class="result-bac-unit">BAC</div>
+        <div class="result-summary-grid">
+          <div class="bac-metric-block primary">
+            <div class="result-bac-label">Estimated Current BAC</div>
+            <div class="result-bac-val" id="bacDisplay" style="color:var(--accent);">—</div>
+            <div class="result-bac-unit">BAC right now</div>
+            <div class="metric-helper">Modeled estimate for this moment.</div>
+          </div>
+          <div class="bac-metric-block">
+            <div class="result-bac-label">Estimated Peak BAC</div>
+            <div class="result-bac-val" id="peakBacDisplay" style="color:var(--accent);">—</div>
+            <div class="result-bac-unit">Highest modeled BAC</div>
+            <div class="metric-helper">Based on drinks already logged.</div>
+            <div class="peak-timing" id="peakTiming">—</div>
+          </div>
+        </div>
         <div>
           <span class="result-status status-safe" id="bacStatus">
             <span class="sdot" style="background:var(--accent);"></span>
@@ -292,29 +315,61 @@
           <span style="font-size:0.7rem;color:var(--muted);" id="graphLabel">—</span>
         </div>
         <div class="graph-area">
-          <svg viewBox="0 0 520 180" preserveAspectRatio="none" id="bacSvg">
+          <svg viewBox="0 0 520 300" preserveAspectRatio="none" id="bacSvg">
             <defs>
               <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="#C8F04D" stop-opacity="0.22"/>
                 <stop offset="100%" stop-color="#C8F04D" stop-opacity="0"/>
               </linearGradient>
             </defs>
-            <line x1="0" y1="36" x2="520" y2="36" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-            <line x1="0" y1="72" x2="520" y2="72" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-            <line x1="0" y1="108" x2="520" y2="108" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-            <line x1="0" y1="144" x2="520" y2="144" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-            <line x1="0" y1="72" x2="520" y2="72" stroke="rgba(255,107,107,0.35)" stroke-width="1" stroke-dasharray="5,4"/>
-            <text x="8" y="68" font-size="9" fill="rgba(255,107,107,0.65)" font-family="DM Sans">0.08</text>
-            <path id="curveArea" d="M0 180 L520 180 Z" fill="url(#curveGrad)"/>
-            <path id="curveLine" d="M0 180 L520 180" fill="none" stroke="#C8F04D" stroke-width="2.5" stroke-linecap="round"/>
-            <circle id="currentDot" cx="0" cy="180" r="5" fill="#C8F04D" filter="drop-shadow(0 0 6px #C8F04D)" visibility="hidden"/>
-            <circle id="currentDotRing" cx="0" cy="180" r="10" fill="rgba(200,240,77,0.2)" visibility="hidden"/>
+            <rect x="0" y="10" width="520" height="105" fill="rgba(255,107,107,0.13)"/>
+            <rect x="0" y="115" width="520" height="70" fill="rgba(255,179,71,0.11)"/>
+            <rect x="0" y="185" width="520" height="49" fill="rgba(255,179,71,0.07)"/>
+            <rect x="0" y="234" width="520" height="56" fill="rgba(200,240,77,0.055)"/>
+            <line x1="0" y1="10" x2="520" y2="10" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="115" x2="520" y2="115" stroke="rgba(255,255,255,0.055)" stroke-width="1"/>
+            <line x1="0" y1="185" x2="520" y2="185" stroke="rgba(255,255,255,0.055)" stroke-width="1"/>
+            <line x1="0" y1="234" x2="520" y2="234" stroke="rgba(255,107,107,0.45)" stroke-width="1.2" stroke-dasharray="5,4"/>
+            <line x1="0" y1="290" x2="520" y2="290" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+            <text x="470" y="231" text-anchor="end" font-size="9" fill="rgba(255,107,107,0.72)" font-family="DM Sans">0.08</text>
+            <path id="curveArea" d="M0 300 L520 300 Z" fill="url(#curveGrad)"/>
+            <path id="curveLine" d="M0 300 L520 300" fill="none" stroke="#C8F04D" stroke-width="3" stroke-linecap="round"/>
+            <circle id="peakDotRing" cx="0" cy="300" r="8" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.38)" stroke-width="1" visibility="hidden"/>
+            <circle id="peakDot" cx="0" cy="300" r="3.5" fill="rgba(255,255,255,0.9)" visibility="hidden"/>
+            <circle id="currentDot" cx="0" cy="300" r="5" fill="#C8F04D" filter="drop-shadow(0 0 6px #C8F04D)" visibility="hidden"/>
+            <circle id="currentDotRing" cx="0" cy="300" r="10" fill="rgba(200,240,77,0.2)" visibility="hidden"/>
           </svg>
         </div>
         <div class="graph-x-labels"><span>0h</span><span>1h</span><span>2h</span><span>3h</span><span>4h</span><span>5h</span><span>6h</span></div>
         <div class="legend">
           <div class="legend-item"><div class="legend-line" style="background:var(--accent);"></div>Estimated BAC</div>
           <div class="legend-item"><div class="legend-line" style="background:var(--red);opacity:0.6;"></div>0.08 common legal driving threshold</div>
+        </div>
+        <div class="zone-legend" aria-label="BAC zone legend">
+          <div class="zone-card" data-bac-zone="safe">
+            <div class="zone-head"><span class="zone-swatch" style="background:rgba(200,240,77,0.55);"></span><span class="zone-name">Safe</span></div>
+            <div class="zone-range">0.00–0.08 BAC</div>
+            <div class="zone-symptoms">mild relaxation · mood lift · slower reactions</div>
+            <div class="zone-current-badge">Current level</div>
+          </div>
+          <div class="zone-card" data-bac-zone="mild">
+            <div class="zone-head"><span class="zone-swatch" style="background:rgba(255,179,71,0.46);"></span><span class="zone-name">Mild intoxication</span></div>
+            <div class="zone-range">0.08–0.15 BAC</div>
+            <div class="zone-symptoms">impaired judgment · lower inhibition · reduced coordination</div>
+            <div class="zone-current-badge">Current level</div>
+          </div>
+          <div class="zone-card" data-bac-zone="intoxication">
+            <div class="zone-head"><span class="zone-swatch" style="background:rgba(255,179,71,0.72);"></span><span class="zone-name">Intoxication</span></div>
+            <div class="zone-range">0.15–0.25 BAC</div>
+            <div class="zone-symptoms">motor impairment · slurred speech · poor balance</div>
+            <div class="zone-current-badge">Current level</div>
+          </div>
+          <div class="zone-card" data-bac-zone="heavy">
+            <div class="zone-head"><span class="zone-swatch" style="background:rgba(255,107,107,0.68);"></span><span class="zone-name">Heavy intoxication</span></div>
+            <div class="zone-range">0.25–0.40 BAC</div>
+            <div class="zone-symptoms">vomiting risk · blacking out · severe impairment</div>
+            <div class="zone-current-badge">Current level</div>
+          </div>
         </div>
       </div>
 
@@ -335,9 +390,15 @@ const PROFILE_KEY = 'safer_user_profile';
 const ML_PER_OZ   = 29.5735;
 const EtOH_DENSITY = 0.789;
 const GRAMS_PER_STD = 14;
+const AUTO_REFRESH_MS = 60000;
+const PREDICTION_TIMEOUT_MS = 15000;
 
 let sessionEndedNoticeVisible = false;
 let lastQuickPickLabel = '';
+let autoRefreshTimer = null;
+let computeInFlight = false;
+let manualDebounceTimer = null;
+let fixedCurveCache = null;
 
 /* ── Profile helpers ── */
 function readProfile() {
@@ -353,9 +414,8 @@ function normalizeProfile(p) {
   var weightKg = p.weight_lbs ? p.weight_lbs * 0.453592 : null;
   var heightCm = p.height_in ? p.height_in * 2.54 : null;
   var bf = (p.body_fat_percent != null && p.body_fat_percent !== '') ? Number(p.body_fat_percent) : null;
-  var bfBracket = bf != null ? (bf < 15 ? 'low' : bf <= 25 ? 'mid' : 'high') : null;
-  if (!sex || !ageYears || !weightKg || !heightCm || !bfBracket) return null;
-  return { sex, ageYears, weightKg, heightCm, bodyFatPercent: bf, bodyFatBracket: bfBracket, drinksPerWeek: p.drinks_per_week || 0, name: p.name || '' };
+  if (!sex || !ageYears || !weightKg || !heightCm || !Number.isFinite(bf)) return null;
+  return { sex, ageYears, weightKg, heightCm, bodyFatPercent: bf, drinksPerWeek: p.drinks_per_week || 0, name: p.name || '' };
 }
 
 function getProfile() { return normalizeProfile(readProfile()); }
@@ -369,22 +429,10 @@ function buildProfileSnapshot(profile, r) {
     height_cm: profile.heightCm,
     weight_kg: profile.weightKg,
     body_fat_percent: profile.bodyFatPercent,
-    body_fat_bracket: profile.bodyFatBracket,
     drinks_per_week: profile.drinksPerWeek
   };
   if (Number.isFinite(Number(r)) && Number(r) > 0) snapshot.r = Number(r);
   return snapshot;
-}
-
-/* ── Sidebar avatar ── */
-function syncSidebarAvatar() {
-  var p = readProfile();
-  var name = p && p.name ? p.name : '';
-  var initials = name ? name[0].toUpperCase() : '?';
-  var el = document.getElementById('sidebarAvatar');
-  var nm = document.getElementById('sidebarName');
-  if (el) el.textContent = initials;
-  if (nm) nm.textContent = name || 'You';
 }
 
 /* ── Profile banner ── */
@@ -484,6 +532,7 @@ function syncSessionUI() {
   syncProfileBanner();
   updateBtnState();
   if (active) refreshSessionStatus(active);
+  syncAutoRefresh();
 }
 
 function refreshSessionStatus(session) {
@@ -502,6 +551,33 @@ function updateBtnState() {
   if (btn) btn.disabled = !active || !p || !s || s.drinks === 0;
 }
 
+function shouldAutoRefresh() {
+  var active = getActive();
+  if (!active || !getProfile()) return false;
+  var s = summarize(active);
+  return s.drinks > 0 && s.grams > 0;
+}
+
+function clearAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+}
+
+function syncAutoRefresh() {
+  if (!shouldAutoRefresh()) {
+    clearAutoRefresh();
+    return;
+  }
+  if (!autoRefreshTimer) {
+    autoRefreshTimer = setInterval(function() {
+      if (shouldAutoRefresh()) doCompute({ immediate: true, source: 'auto' });
+      else clearAutoRefresh();
+    }, AUTO_REFRESH_MS);
+  }
+}
+
 /* ── Start session ── */
 document.getElementById('btnStartSession').addEventListener('click', function() {
   var title = document.getElementById('sessionTitleInput').value.trim() ||
@@ -509,6 +585,7 @@ document.getElementById('btnStartSession').addEventListener('click', function() 
   SaferSessionStorage.createSession({ title });
   sessionEndedNoticeVisible = false;
   syncSessionUI();
+  if (shouldAutoRefresh()) doCompute({ immediate: true, source: 'auto' });
 });
 
 /* ── Log drink ── */
@@ -536,8 +613,9 @@ document.getElementById('btnLogDrink').addEventListener('click', function() {
   });
   refreshSessionStatus(getActive());
   updateBtnState();
+  syncAutoRefresh();
   // Auto-compute if profile ready
-  if (getProfile()) doCompute();
+  if (getProfile()) doCompute({ immediate: true, source: 'manual' });
 });
 
 /* ── Log symptom ── */
@@ -560,12 +638,15 @@ document.getElementById('btnEndSession').addEventListener('click', function() {
   if (!confirm('End this session?')) return;
   SaferSessionStorage.completeSession(session.session_id);
   sessionEndedNoticeVisible = true;
+  clearAutoRefresh();
   resetDisplay();
   syncSessionUI();
 });
 
 /* ── Update button ── */
-document.getElementById('btnUpdate').addEventListener('click', doCompute);
+document.getElementById('btnUpdate').addEventListener('click', function() {
+  doCompute({ source: 'manual' });
+});
 
 /* ── Build /predict payload ── */
 function buildPayload(profile, session, summary) {
@@ -577,7 +658,6 @@ function buildPayload(profile, session, summary) {
       height_cm: profile.heightCm,
       weight_kg: profile.weightKg,
       body_fat_percent: profile.bodyFatPercent,
-      body_fat_bracket: profile.bodyFatBracket,
       drinks_per_week: profile.drinksPerWeek
     },
     session: {
@@ -593,19 +673,31 @@ function buildPayload(profile, session, summary) {
 }
 
 /* ── Main compute ── */
-let _debounce = null;
-async function doCompute() {
-  clearTimeout(_debounce);
-  _debounce = setTimeout(_doComputeNow, 300);
+async function doCompute(options) {
+  options = options || {};
+  var isAuto = options.source === 'auto';
+  if (isAuto && manualDebounceTimer) return;
+  if (options.immediate) {
+    _doComputeNow(options);
+    return;
+  }
+  clearTimeout(manualDebounceTimer);
+  manualDebounceTimer = setTimeout(function() {
+    manualDebounceTimer = null;
+    _doComputeNow(options);
+  }, 300);
 }
 
-async function _doComputeNow() {
+async function _doComputeNow(options) {
+  options = options || {};
+  if (computeInFlight) return;
   var p = getProfile();
   if (!p) { setStatus('Complete your profile first.', 'safe'); return; }
   var session = getActive();
-  if (!session) return;
+  if (!session) { clearAutoRefresh(); return; }
   var s = summarize(session);
   if (s.drinks === 0 || s.grams <= 0) { setStatus('Log a drink to get an estimate.', 'safe'); return; }
+  refreshSessionStatus(session);
 
   // Update session inputs
   session.inputs.drinks       = s.std;
@@ -615,23 +707,37 @@ async function _doComputeNow() {
   SaferSessionStorage.updateSession(session);
 
   var btn = document.getElementById('btnUpdate');
-  btn.textContent = 'Calculating…';
-  btn.disabled    = true;
+  var isAuto = options.source === 'auto';
+  if (!isAuto) btn.textContent = 'Calculating…';
+  btn.disabled = true;
   document.getElementById('errorCard').style.display = 'none';
 
   var payload = buildPayload(p, session, s);
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timeoutId = controller ? setTimeout(function() { controller.abort(); }, PREDICTION_TIMEOUT_MS) : null;
+  var fetchOptions = {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  };
+  if (controller) fetchOptions.signal = controller.signal;
 
+  computeInFlight = true;
   try {
-    var res = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    var res = await fetch(API, fetchOptions);
     if (!res.ok) throw new Error('API error ' + res.status);
     var data = await res.json();
     renderResult(data, s, session, p, payload);
   } catch(err) {
-    document.getElementById('errorCard').style.display = 'block';
+    if (!isAuto) document.getElementById('errorCard').style.display = 'block';
+    else console.warn('Auto-refresh BAC estimate failed:', err);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+    computeInFlight = false;
+    if (!isAuto) btn.textContent = '↻ Update Estimate';
+    updateBtnState();
+    syncAutoRefresh();
   }
-
-  btn.textContent = '↻ Update Estimate';
-  updateBtnState();
 }
 
 function normalizeBackendCurve(curve) {
@@ -653,6 +759,56 @@ function normalizeBackendCurve(curve) {
   }).sort(function(a, b) { return a.hour - b.hour; });
 }
 
+function curveSignatureFromPayload(payload) {
+  if (!payload || !payload.profile || !payload.session) return '';
+  return JSON.stringify({
+    profile: payload.profile,
+    grams_alcohol: payload.session.grams_alcohol,
+    standard_drinks: payload.session.standard_drinks,
+    drink_events: payload.session.drink_events || [],
+    food_intake: payload.session.food_intake || null,
+    history: payload.history || null
+  });
+}
+
+function getSessionCurveForRender(backendCurve, requestPayload) {
+  var signature = curveSignatureFromPayload(requestPayload);
+  if (!signature || fixedCurveCache == null || fixedCurveCache.signature !== signature) {
+    fixedCurveCache = {
+      signature: signature,
+      curve: backendCurve.slice()
+    };
+  } else if ((!fixedCurveCache.curve || fixedCurveCache.curve.length === 0) && backendCurve.length > 0) {
+    fixedCurveCache.curve = backendCurve.slice();
+  }
+  return fixedCurveCache && Array.isArray(fixedCurveCache.curve) ? fixedCurveCache.curve : [];
+}
+
+function finiteNumberOrNull(value) {
+  var number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function bacZoneForValue(value) {
+  var bac = finiteNumberOrNull(value);
+  if (bac == null) return null;
+  bac = Math.max(0, bac);
+  if (bac < 0.08) return 'safe';
+  if (bac < 0.15) return 'mild';
+  if (bac < 0.25) return 'intoxication';
+  return 'heavy';
+}
+
+function updateZoneLegend(currentBac) {
+  var activeZone = bacZoneForValue(currentBac);
+  document.querySelectorAll('.zone-card[data-bac-zone]').forEach(function(card) {
+    var isActive = activeZone != null && card.dataset.bacZone === activeZone;
+    card.classList.toggle('active', isActive);
+    if (isActive) card.setAttribute('aria-current', 'true');
+    else card.removeAttribute('aria-current');
+  });
+}
+
 function estimateNearZeroHourFromCurve(curve, currentHour) {
   var threshold = 0.003;
   var sawPositive = false;
@@ -665,6 +821,51 @@ function estimateNearZeroHourFromCurve(curve, currentHour) {
   return null;
 }
 
+function peakFromCurve(curve, currentHour) {
+  if (!curve.length) return { bac: null, hour: null, status: 'unknown', timeToPeakHours: null };
+  var peak = curve.reduce(function(best, point) {
+    return point.estimate > best.estimate ? point : best;
+  }, curve[0]);
+  var timeToPeak = peak.hour - currentHour;
+  return {
+    bac: peak.estimate,
+    hour: peak.hour,
+    status: peak.estimate <= 0 ? 'none' : (timeToPeak > 0.001 ? 'future' : 'already_reached'),
+    timeToPeakHours: peak.estimate <= 0 ? null : Math.max(0, timeToPeak)
+  };
+}
+
+function interpolateCurveAtHour(curve, hour) {
+  if (!curve.length || !Number.isFinite(hour)) return null;
+  if (hour <= curve[0].hour) return curve[0].estimate;
+  for (var i = 1; i < curve.length; i++) {
+    var prev = curve[i - 1], next = curve[i];
+    if (hour <= next.hour) {
+      var span = next.hour - prev.hour;
+      if (span <= 0) return next.estimate;
+      var pct = (hour - prev.hour) / span;
+      return prev.estimate + (next.estimate - prev.estimate) * pct;
+    }
+  }
+  return curve[curve.length - 1].estimate;
+}
+
+function formatDuration(hours) {
+  if (!Number.isFinite(hours) || hours < 0) return '';
+  var mins = Math.round(hours * 60);
+  if (mins < 60) return mins + ' min';
+  var h = Math.floor(mins / 60);
+  var m = mins % 60;
+  return m ? h + 'h ' + m + 'm' : h + 'h';
+}
+
+function peakTimingText(status, timeToPeakHours) {
+  if (status === 'future' && Number.isFinite(timeToPeakHours)) return 'Peak in ~' + formatDuration(timeToPeakHours);
+  if (status === 'already_reached') return 'Peak already reached';
+  if (status === 'none') return 'No modeled peak yet';
+  return 'Peak timing unavailable';
+}
+
 function clockFromSessionHour(session, hour) {
   var startMs = new Date(session && session.started_at ? session.started_at : Date.now()).getTime();
   if (!Number.isFinite(startMs) || !Number.isFinite(hour) || hour < 0) return '—';
@@ -675,17 +876,41 @@ function clockFromSessionHour(session, hour) {
 function renderResult(data, summary, session, profile, requestPayload) {
   var model = data.model || {};
   var bac   = data.bac   || {};
-  var est   = Number(bac.estimate) || 0;
-  var low   = Number(bac.low)      || 0;
-  var high  = Number(bac.high)     || 0;
+  var estValue = finiteNumberOrNull(bac.estimate);
+  var est   = estValue == null ? 0 : Math.max(0, estValue);
+  var lowValue = finiteNumberOrNull(bac.low);
+  var highValue = finiteNumberOrNull(bac.high);
+  var low   = lowValue == null ? est : Math.max(0, lowValue);
+  var high  = highValue == null ? est : Math.max(0, highValue);
   var r     = Number(model.r)      || 0;
   var beta  = Number(model.beta_per_hour) || 0;
+  var backendCurve = normalizeBackendCurve(data.curve);
+  var sessionCurve = getSessionCurveForRender(backendCurve, requestPayload);
 
   // BAC display
   var bacEl = document.getElementById('bacDisplay');
   bacEl.textContent = est.toFixed(3);
   var color = est < 0.05 ? 'var(--accent)' : est < 0.08 ? 'var(--orange)' : 'var(--red)';
   bacEl.style.color = color;
+  updateZoneLegend(estValue);
+
+  // Peak BAC display
+  var curvePeak = peakFromCurve(sessionCurve, summary.elapsed);
+  var peakBac = curvePeak.bac;
+  var peakHour = curvePeak.hour;
+  var peakStatus = curvePeak.status;
+  var timeToPeak = curvePeak.timeToPeakHours;
+  var peakEl = document.getElementById('peakBacDisplay');
+  var peakTimingEl = document.getElementById('peakTiming');
+  if (Number.isFinite(peakBac)) {
+    peakEl.textContent = peakBac.toFixed(3);
+    peakEl.style.color = peakBac < 0.08 ? 'var(--accent)' : peakBac < 0.15 ? 'var(--orange)' : 'var(--red)';
+    peakTimingEl.textContent = peakTimingText(peakStatus, timeToPeak);
+  } else {
+    peakEl.textContent = '—';
+    peakEl.style.color = 'var(--accent)';
+    peakTimingEl.textContent = '—';
+  }
 
   // Status
   if (est < 0.05)       setStatus('Lower estimated risk right now', 'safe');
@@ -697,9 +922,8 @@ function renderResult(data, summary, session, profile, requestPayload) {
   document.getElementById('displayHigh').textContent = high.toFixed(3);
 
   // Estimated BAC near-zero time
-  var backendCurve = normalizeBackendCurve(data.curve);
-  var nearZeroHour = data.estimated_near_zero_hour == null ? NaN : Number(data.estimated_near_zero_hour);
-  if (!Number.isFinite(nearZeroHour)) nearZeroHour = estimateNearZeroHourFromCurve(backendCurve, summary.elapsed);
+  var nearZeroHour = estimateNearZeroHourFromCurve(sessionCurve, summary.elapsed);
+  if (!Number.isFinite(nearZeroHour)) nearZeroHour = data.estimated_near_zero_hour == null ? NaN : Number(data.estimated_near_zero_hour);
   if (!Number.isFinite(nearZeroHour) && est > 0 && beta > 0) nearZeroHour = summary.elapsed + (est / beta);
   document.getElementById('displaySober').textContent =
     Number.isFinite(nearZeroHour) && nearZeroHour > summary.elapsed ? clockFromSessionHour(session, nearZeroHour) : '—';
@@ -737,6 +961,10 @@ function renderResult(data, summary, session, profile, requestPayload) {
     estimate: est,
     beta: beta,
     beta_metadata: data.beta_metadata || null,
+    peak_bac: Number.isFinite(peakBac) ? peakBac : null,
+    peak_bac_hour: Number.isFinite(peakHour) ? peakHour : null,
+    peak_status: peakStatus || null,
+    time_to_peak_hours: Number.isFinite(timeToPeak) ? timeToPeak : null,
     curve: Array.isArray(data.curve) ? data.curve : null,
     curve_metadata: data.curve_metadata || null,
     model_version: model.name, personalization: model.personalization,
@@ -753,11 +981,18 @@ function renderResult(data, summary, session, profile, requestPayload) {
   session.updated_at = new Date().toISOString();
   SaferSessionStorage.updateSession(session);
 
-  // Backend curve points are authoritative when present.
-  if (backendCurve.length > 0) {
-    updateGraphFromBackendCurve(backendCurve, summary.elapsed, est);
+  // The curve is session-relative and fixed for the current drink/profile set;
+  // only the marker advances with elapsed time between material input changes.
+  if (sessionCurve.length > 0) {
+    var markerBac = interpolateCurveAtHour(sessionCurve, summary.elapsed);
+    updateGraphFromBackendCurve(
+      sessionCurve,
+      summary.elapsed,
+      Number.isFinite(markerBac) ? markerBac : est,
+      curvePeak
+    );
   } else {
-    updateGraph(est, beta, summary.elapsed, r, profile.weightKg, summary.grams);
+    updateGraph(est, beta, summary.elapsed, r, profile.weightKg, summary.grams, curvePeak);
   }
 }
 
@@ -770,8 +1005,12 @@ function setStatus(msg, type) {
 
 /* ── Graph ── */
 function resetDisplay() {
+  fixedCurveCache = null;
   document.getElementById('bacDisplay').textContent = '—';
   document.getElementById('bacDisplay').style.color = 'var(--accent)';
+  document.getElementById('peakBacDisplay').textContent = '—';
+  document.getElementById('peakBacDisplay').style.color = 'var(--accent)';
+  document.getElementById('peakTiming').textContent = '—';
   document.getElementById('displayLow').textContent  = '—';
   document.getElementById('displayHigh').textContent = '—';
   document.getElementById('displaySober').textContent = '—';
@@ -779,12 +1018,15 @@ function resetDisplay() {
   document.getElementById('betaDisplay').textContent  = '—';
   document.getElementById('graphLabel').textContent   = '—';
   setStatus('Start a session and log a drink', 'safe');
+  updateZoneLegend(null);
   resetGraph();
 }
 
 function resetGraph() {
-  document.getElementById('curveLine').setAttribute('d', 'M0 180 L520 180');
-  document.getElementById('curveArea').setAttribute('d', 'M0 180 L520 180 Z');
+  document.getElementById('curveLine').setAttribute('d', 'M0 300 L520 300');
+  document.getElementById('curveArea').setAttribute('d', 'M0 300 L520 300 Z');
+  document.getElementById('peakDot').setAttribute('visibility', 'hidden');
+  document.getElementById('peakDotRing').setAttribute('visibility', 'hidden');
   document.getElementById('currentDot').setAttribute('visibility', 'hidden');
   document.getElementById('currentDotRing').setAttribute('visibility', 'hidden');
   setGraphXLabels(6);
@@ -804,12 +1046,10 @@ function setGraphXLabels(totalH) {
   });
 }
 
-function drawCurve(points, currentHour, currentBac) {
+function drawCurve(points, currentHour, currentBac, peakPoint) {
   if (!points || points.length === 0) { resetGraph(); return; }
-  var svgH = 180;
-  var totalH = Math.max(6, points[points.length - 1].hour || 0, currentHour || 0);
-  var maxObserved = Math.max.apply(null, points.map(function(p) { return Math.max(p.high || 0, p.estimate || 0); }).concat([currentBac || 0, 0.20]));
-  var maxBAC = Math.max(0.20, maxObserved * 1.1);
+  var svgH = 300, maxBAC = 0.40;
+  var totalH = Math.max(6, points[points.length - 1].hour || 0);
   setGraphXLabels(totalH);
 
   function toY(b) { return svgH - 10 - Math.min(1, Math.max(0, b / maxBAC)) * (svgH - 20); }
@@ -826,6 +1066,24 @@ function drawCurve(points, currentHour, currentBac) {
 
   document.getElementById('curveLine').setAttribute('d', pathD);
   document.getElementById('curveArea').setAttribute('d', areaD);
+  document.getElementById('curveLine').setAttribute('stroke', '#C8F04D');
+
+  var peak = peakPoint && Number.isFinite(peakPoint.hour) && Number.isFinite(peakPoint.bac)
+    ? peakPoint
+    : peakFromCurve(points, currentHour);
+  var peakDot = document.getElementById('peakDot');
+  var peakRing = document.getElementById('peakDotRing');
+  if (Number.isFinite(peak.hour) && Number.isFinite(peak.bac) && peak.bac > 0) {
+    var px = toX(peak.hour);
+    var py = toY(peak.bac);
+    peakDot.setAttribute('cx', px); peakDot.setAttribute('cy', py);
+    peakRing.setAttribute('cx', px); peakRing.setAttribute('cy', py);
+    peakDot.setAttribute('visibility', 'visible');
+    peakRing.setAttribute('visibility', 'visible');
+  } else {
+    peakDot.setAttribute('visibility', 'hidden');
+    peakRing.setAttribute('visibility', 'hidden');
+  }
 
   var cx = toX(currentHour || 0);
   var cy = toY(currentBac || 0);
@@ -837,15 +1095,14 @@ function drawCurve(points, currentHour, currentBac) {
   ring.setAttribute('visibility', 'visible');
 
   var c = currentBac < 0.05 ? '#C8F04D' : currentBac < 0.08 ? '#FFB347' : '#FF6B6B';
-  document.getElementById('curveLine').setAttribute('stroke', c);
   dot.setAttribute('fill', c);
 }
 
-function updateGraphFromBackendCurve(curve, currentHour, currentBac) {
-  drawCurve(curve, currentHour, currentBac);
+function updateGraphFromBackendCurve(curve, currentHour, currentBac, peakPoint) {
+  drawCurve(curve, currentHour, currentBac, peakPoint);
 }
 
-function updateGraph(bac, beta, hours, r, weightKg, gramsAlcohol) {
+function updateGraph(bac, beta, hours, r, weightKg, gramsAlcohol, peakPoint) {
   // Legacy fallback for older backend responses without curve points.
   var totalH = Math.max(6, hours || 0), steps = 60;
   var points = [];
@@ -854,13 +1111,15 @@ function updateGraph(bac, beta, hours, r, weightKg, gramsAlcohol) {
     var b = Math.max(0, gramsAlcohol / (weightKg * 10 * r) - beta * t);
     points.push({ hour: t, estimate: b, low: b, high: b });
   }
-  drawCurve(points, hours, bac);
+  drawCurve(points, hours, bac, peakPoint);
 }
 
 /* ── Init ── */
-syncSidebarAvatar();
 syncSessionUI();
 if (!getProfile()) resetDisplay();
+if (shouldAutoRefresh()) doCompute({ immediate: true, source: 'auto' });
+window.addEventListener('beforeunload', clearAutoRefresh);
+window.addEventListener('pagehide', clearAutoRefresh);
 </script>
 </body>
 </html>

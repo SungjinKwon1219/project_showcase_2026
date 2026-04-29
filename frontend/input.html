@@ -25,11 +25,6 @@
   .nav-item:hover{background:rgba(255,255,255,0.07);color:var(--text);}
   .nav-item.active{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,240,77,0.2);}
   .nav-icon{font-size:1rem;flex-shrink:0;}
-  .sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding-top:1.25rem;}
-  .user-pill{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:10px;}
-  .user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#C8F04D 0%,#5B8DEF 100%);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#0F1A00;flex-shrink:0;}
-  .user-name{font-size:0.83rem;font-weight:500;color:var(--text);}
-  .user-email{font-size:0.72rem;color:var(--muted);}
   .main{margin-left:240px;flex:1;padding:2rem 2.5rem;max-width:680px;}
   .page-heading{margin-bottom:2rem;}
   .page-heading h1{font-family:'Syne',sans-serif;font-weight:700;font-size:1.5rem;letter-spacing:-0.5px;}
@@ -71,9 +66,8 @@
   .global-error.visible{display:block;}
   @media(max-width:800px){
     .sidebar{width:64px;padding:1rem 0.75rem;}
-    .sidebar-logo span:last-child,.sidebar-section,.user-info,.nav-item span:last-child{display:none;}
+    .sidebar-logo span:last-child,.sidebar-section,.nav-item span:last-child{display:none;}
     .nav-item{justify-content:center;padding:0.65rem;}
-    .user-pill{justify-content:center;}
     .main{margin-left:64px;padding:1.5rem;max-width:none;}
     .field-row{grid-template-columns:1fr;}
     .field-row.thirds{grid-template-columns:1fr;}
@@ -89,12 +83,6 @@
   <a href="history.html" class="nav-item"><span class="nav-icon">◷</span><span>History</span></a>
   <div class="sidebar-section">Account</div>
   <a href="input.html" class="nav-item active"><span class="nav-icon">◉</span><span>My Profile</span></a>
-  <div class="sidebar-bottom">
-    <div class="user-pill">
-      <div class="user-avatar" id="avatarInitials">?</div>
-      <div class="user-info"><div class="user-name" id="sidebarName">My Profile</div><div class="user-email">Saved on this device</div></div>
-    </div>
-  </div>
 </aside>
 
 <main class="main">
@@ -129,7 +117,7 @@
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>
-            <div class="field-hint">Used in the r regression model.</div>
+            <div class="field-hint">Used with body size and body-water assumptions to estimate alcohol distribution.</div>
             <div class="field-error" id="err-sex"></div>
           </div>
         </div>
@@ -150,7 +138,7 @@
           <div class="field" data-field="drinks_per_week">
             <label for="dpwInput">Drinks per week (avg)</label>
             <input type="number" id="dpwInput" min="0" max="100" step="1" placeholder="e.g. 5">
-            <div class="field-hint">Affects the elimination rate prior.</div>
+            <div class="field-hint">Affects the elimination rate prior; body-fat estimate does not directly change elimination.</div>
           </div>
         </div>
       </div>
@@ -182,15 +170,15 @@
             <input type="number" id="bodyFatInput" min="3" max="65" step="0.1" placeholder="e.g. 18" required>
             <span class="unit-label">%</span>
           </div>
-          <div class="field-hint">Don't know your exact number? Use the selector below.</div>
+          <div class="field-hint">Used as a broad modeling input, not a medical classification.</div>
           <div class="field-error" id="err-body_fat_percent"></div>
         </div>
         <div style="margin-bottom:0.5rem;">
           <label style="font-size:0.73rem;color:var(--muted);display:block;margin-bottom:0.5rem;letter-spacing:0.3px;text-transform:uppercase;font-weight:500;">Or pick a bracket (auto-fills %)</label>
           <div class="fat-grid">
-            <button type="button" class="fat-btn" data-fat="low" data-val="12">Low fat<span class="fat-range">Men &lt;15% · Women &lt;24%</span></button>
-            <button type="button" class="fat-btn" data-fat="mid" data-val="20">Average<span class="fat-range">Men 15–24% · Women 24–31%</span></button>
-            <button type="button" class="fat-btn" data-fat="high" data-val="30">Higher fat<span class="fat-range">Men &gt;24% · Women &gt;31%</span></button>
+            <button type="button" class="fat-btn" data-fat="low" data-val="12">Lower estimate<span class="fat-range">Model bucket &lt;15%</span></button>
+            <button type="button" class="fat-btn" data-fat="mid" data-val="20">Middle estimate<span class="fat-range">Model bucket 15–25%</span></button>
+            <button type="button" class="fat-btn" data-fat="high" data-val="30">Higher estimate<span class="fat-range">Model bucket &gt;25%</span></button>
           </div>
         </div>
       </div>
@@ -295,17 +283,7 @@
     document.getElementById('newUserBanner').style.display = 'none';
     document.getElementById('savedBanner').style.display = 'flex';
     window.scrollTo({top: 0, behavior: 'smooth'});
-    updateSidebarAvatar(payload);
   });
-
-  function updateSidebarAvatar(profile) {
-    var name = profile && profile.name ? profile.name : '';
-    var initials = name ? name.trim()[0].toUpperCase() : (profile && profile.sex === 'male' ? 'M' : profile && profile.sex === 'female' ? 'F' : '?');
-    var el = document.getElementById('avatarInitials');
-    var nm = document.getElementById('sidebarName');
-    if (el) el.textContent = initials;
-    if (nm) nm.textContent = name || 'My Profile';
-  }
 
   function prefillFromStored() {
     var p = readProfile();
@@ -327,7 +305,6 @@
         b.classList.toggle('active', b.dataset.fat === bracket);
       });
     }
-    updateSidebarAvatar(p);
   }
 
   prefillFromStored();

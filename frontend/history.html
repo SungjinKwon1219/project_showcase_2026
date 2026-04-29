@@ -45,12 +45,6 @@
   .nav-item:hover { background: var(--surface-hover); color: var(--text); }
   .nav-item.active { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(200,240,77,0.2); }
   .nav-icon { font-size: 1rem; }
-  .sidebar-bottom { margin-top: auto; border-top: 1px solid var(--border); padding-top: 1.25rem; }
-  .user-pill { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 10px; cursor: pointer; transition: background 0.15s; }
-  .user-pill:hover { background: var(--surface-hover); }
-  .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #C8F04D 0%, #5B8DEF 100%); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: #0F1A00; flex-shrink: 0; }
-  .user-name { font-size: 0.83rem; font-weight: 500; color: var(--text); }
-  .user-email { font-size: 0.72rem; color: var(--muted); }
 
   /* MAIN */
   .main { margin-left: 240px; flex: 1; padding: 2rem 2.5rem; }
@@ -341,12 +335,6 @@
   <a href="history.html" class="nav-item active"><span class="nav-icon">◷</span><span>History</span></a>
   <div class="sidebar-section">Account</div>
   <a href="input.html" class="nav-item"><span class="nav-icon">◉</span><span>My Profile</span></a>
-  <div class="sidebar-bottom">
-    <div class="user-pill">
-      <div class="user-avatar">IL</div>
-      <div class="user-info"><div class="user-name">Irayna L.</div><div class="user-email">irayna@ucsb.edu</div></div>
-    </div>
-  </div>
 </aside>
 
 <!-- MAIN -->
@@ -379,7 +367,7 @@
       <div class="sum-val" id="sumDrafts" style="color: var(--blue);">0</div>
     </div>
     <div class="summary-card">
-      <div class="sum-label">Pending Reviews</div>
+      <div class="sum-label">Reviews Saved</div>
       <div class="sum-val warn" id="sumPendingReviews">0</div>
     </div>
   </div>
@@ -403,7 +391,7 @@
             <th>Drink events</th>
             <th>Total std drinks</th>
             <th>Latest session estimate</th>
-            <th>Review</th>
+            <th>Feedback</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -480,15 +468,15 @@
   }
 
   function reviewStatusLabel(s) {
-    if (isReviewPending(s)) return 'Review pending';
-    if (s && (s.review_status === 'completed' || s.post_session_review)) return 'completed';
-    return s && s.status === 'completed' ? 'Review pending' : '—';
+    if (s && (s.review_status === 'completed' || s.post_session_review)) return 'Saved';
+    if (s && s.status === 'completed') return 'Optional';
+    return '—';
   }
 
   function reviewStatusHtml(s) {
     var label = reviewStatusLabel(s);
-    var cls = label === 'Review pending' ? 'review-status-pending' :
-      label === 'completed' ? 'review-status-completed' : '';
+    var cls = label === 'Optional' ? 'review-status-pending' :
+      label === 'Saved' ? 'review-status-completed' : '';
     return '<span class="' + cls + '">' + escapeHtml(label) + '</span>';
   }
 
@@ -667,6 +655,7 @@
   function showDetail(s) {
     var inp = s.inputs || {};
     var fb = s.feedback || {};
+    var snap = latestPredictionSnapshot(s);
     document.getElementById('detailTitle').textContent = shortId(s.session_id);
     document.getElementById('detailDate').textContent = 'Started ' + formatWhen(s.started_at) +
       (s.ended_at ? ' · Ended ' + formatWhen(s.ended_at) : '');
@@ -698,8 +687,8 @@
       ['Latest session range', snap ? (Number(snap.bac_low).toFixed(3) + ' - ' + Number(snap.bac_high).toFixed(3)) : 'No prediction yet'],
       ['Snapshot model', snap ? (snap.model_version || 'legacy snapshot') : 'No prediction yet'],
       ['Model status', snap ? (snap.model_status || 'legacy snapshot') : 'No prediction yet'],
-      ['Personalization', snap ? (snap.personalization || 'unknown') : 'No prediction yet'],
-      ['Post-session review', reviewStatusLabel(s)]
+      ['Personalization status', snap ? (snap.personalization || 'unknown') : 'No prediction yet'],
+      ['Post-session feedback', reviewStatusLabel(s)]
     ];
     body.innerHTML = rows.map(function (pair) {
       return '<div class="detail-row"><span class="detail-key">' + escapeHtml(pair[0]) + '</span>' +
@@ -769,8 +758,8 @@
     if (isReviewPending(s)) {
       return '' +
         '<div class="review-panel">' +
-          '<div class="review-title">Post-session review</div>' +
-          '<p class="review-copy">Subjective feedback may inform future personalization if the backend marks it usable. It does not retroactively change this completed session estimate.</p>' +
+          '<div class="review-title">Post-session feedback</div>' +
+          '<p class="review-copy">Optional subjective feedback is stored with this session. It is not a BAC measurement and does not retroactively change this session estimate.</p>' +
           '<form class="review-form" id="postSessionReviewForm" data-session-id="' + escapeHtml(s.session_id || '') + '">' +
             '<div class="review-grid">' +
               '<div class="review-field"><label for="reviewHangover">Hangover severity, 0-5</label><select id="reviewHangover" name="hangover_severity">' + optionRange(5) + '</select></div>' +
@@ -780,7 +769,7 @@
 	              '<div class="review-field"><label for="reviewMemoryGap">Memory gaps?</label><select id="reviewMemoryGap" name="memory_gap"><option value="false">No</option><option value="true">Yes</option></select></div>' +
 	              '<div class="review-field"><label for="reviewHydration">Hydration after</label><select id="reviewHydration" name="hydration_after"><option value="unknown">Unknown</option><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></div>' +
 	              '<div class="review-field"><label for="reviewFood">Food intake during session</label><select id="reviewFood" name="food_intake"><option value="none">None</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>' +
-	              '<div class="review-field"><label for="reviewFeltSober">Hours until felt sober (e.g. 4.5)</label><input id="reviewFeltSober" name="felt_sober_hours" type="number" min="0.5" max="24" step="0.5" placeholder="e.g. 4.5 — used to refine your personal β estimate"></div>' +
+	              '<div class="review-field"><label for="reviewFeltSober">Hours until effects felt low/near-baseline (e.g. 4.5)</label><input id="reviewFeltSober" name="felt_sober_hours" type="number" min="0.5" max="24" step="0.5" placeholder="Optional subjective estimate"></div>' +
 	              '<input name="final_bac_anchor" type="hidden" value="0.02">' +
 	              '<div class="review-field"><label for="reviewSleep">Sleep hours after session</label><input id="reviewSleep" name="sleep_hours_after" type="number" min="0" max="24" step="0.25" placeholder="Optional"></div>' +
               '<div class="review-field full"><label for="reviewNotes">Notes</label><textarea id="reviewNotes" name="notes" placeholder="Optional context"></textarea></div>' +
@@ -796,18 +785,18 @@
       var savedMessage = '';
       if (lastReviewSavedSessionId === s.session_id) {
         if (betaResult && betaResult.usable_for_personalization === true) {
-          savedMessage = ' Review saved. This session may inform future personalization.';
+          savedMessage = ' Feedback saved. Implied beta metadata was stored with this session.';
         } else if (betaResult) {
-          savedMessage = ' Review saved. This session was not used for personalization because the calibration signal was unreliable.';
+          savedMessage = ' Feedback saved. Implied beta metadata was marked unreliable by the backend.';
         } else {
-          savedMessage = ' Review saved, but personalization could not be updated.';
+          savedMessage = ' Feedback saved.';
         }
       }
       var saved = savedMessage ? '<div class="review-confirmation">✓' + savedMessage + '</div>' : '';
       var confidenceText = betaResult && betaResult.confidence != null ? ' · confidence ' + Number(betaResult.confidence).toFixed(2) : '';
       return saved +
         '<div class="review-panel">' +
-          '<div class="review-title">Post-session review completed</div>' +
+          '<div class="review-title">Post-session feedback saved</div>' +
           '<p class="review-copy">Saved ' + escapeHtml(formatWhen(r.submitted_at)) + '. This feedback is subjective context and is not treated as a BAC measurement.</p>' +
           '<div class="detail-row"><span class="detail-key">Hangover severity</span><span class="detail-value">' + escapeHtml(r.hangover_severity) + '</span></div>' +
           '<div class="detail-row"><span class="detail-key">Perceived peak intoxication</span><span class="detail-value">' + escapeHtml(r.perceived_peak_intoxication) + '</span></div>' +
@@ -816,12 +805,12 @@
 	          '<div class="detail-row"><span class="detail-key">Hydration after</span><span class="detail-value">' + escapeHtml(r.hydration_after || 'unknown') + '</span></div>' +
 	          '<div class="detail-row"><span class="detail-key">Sleep hours after</span><span class="detail-value">' + escapeHtml(r.sleep_hours_after == null ? '—' : r.sleep_hours_after) + '</span></div>' +
 	          '<div class="detail-row"><span class="detail-key">Felt sober after</span><span class="detail-value">' + escapeHtml(r.felt_sober_hours != null ? r.felt_sober_hours + ' hours' : (r.felt_sober_time || '—')) + '</span></div>' +
-	          '<div class="detail-row"><span class="detail-key">Implied β (personalization)</span><span class="detail-value">' + (r.implied_beta != null ? r.implied_beta.toFixed(5) + (betaResult ? (betaResult.usable_for_personalization === true ? ' — usable for future estimates' : ' — not used for personalization') : ' — legacy stored value') + confidenceText : 'Not computed (sober time not entered or server offline)') + '</span></div>' +
+	          '<div class="detail-row"><span class="detail-key">Implied β metadata</span><span class="detail-value">' + (r.implied_beta != null ? r.implied_beta.toFixed(5) + (betaResult ? (betaResult.usable_for_personalization === true ? ' — marked usable by backend' : ' — marked unreliable by backend') : ' — legacy stored value') + confidenceText : 'Not computed (near-baseline time not entered or server offline)') + '</span></div>' +
           '<div class="detail-row"><span class="detail-key">Notes</span><span class="detail-value">' + escapeHtml(r.notes || '—') + '</span></div>' +
         '</div>';
     }
 
-    return '<div class="model-update"><strong>Note:</strong> Post-session review is available after a session is completed. Reviews do not change the estimator yet.</div>';
+    return '<div class="model-update"><strong>Note:</strong> Optional post-session feedback is available after a session is completed. Feedback is subjective context, not a BAC measurement.</div>';
   }
 
 	  async function handleReviewSubmit(event) {
@@ -853,7 +842,7 @@
 	    // Try to back-calculate implied beta from event-level session data.
 	    var session = S.getSessionById(sessionId);
 	    var snap = latestPredictionSnapshot(session);
-	    var personalizationMessage = 'Review saved, but personalization could not be updated.';
+	    var personalizationMessage = 'Feedback saved.';
 	    if (session && feltHours && feltHours > 0) {
 	      try {
 	        var profileSnapshot = profileSnapshotForReview(session, snap);
@@ -901,8 +890,8 @@
 	            review.implied_beta_result = d;
 	            if (Number.isFinite(Number(d.implied_beta))) review.implied_beta = Number(d.implied_beta);
 	            personalizationMessage = d.usable_for_personalization
-	              ? 'Review saved. This session may inform future personalization.'
-	              : 'Review saved. This session was not used for personalization because the calibration signal was unreliable.';
+	              ? 'Feedback saved. Implied beta metadata was stored with this session.'
+	              : 'Feedback saved. Implied beta metadata was marked unreliable by the backend.';
 	          }
 	        }
 	      } catch(e) { /* server offline — non-fatal */ }
@@ -919,13 +908,11 @@
     var all = S.getSessions();
     var completed = all.filter(function (x) { return x.status === 'completed'; }).length;
     var drafts = all.filter(function (x) { return x.status === 'draft'; }).length;
-    var pendingReviews = typeof S.getSessionsPendingReview === 'function'
-      ? S.getSessionsPendingReview().length
-      : all.filter(isReviewPending).length;
+    var savedReviews = all.filter(function (x) { return x && x.post_session_review; }).length;
     document.getElementById('sumTotal').textContent = String(all.length);
     document.getElementById('sumCompleted').textContent = String(completed);
     document.getElementById('sumDrafts').textContent = String(drafts);
-    document.getElementById('sumPendingReviews').textContent = String(pendingReviews);
+    document.getElementById('sumPendingReviews').textContent = String(savedReviews);
   }
 
   document.getElementById('sessionSearch').addEventListener('input', function () {
