@@ -485,13 +485,12 @@ def event_aware_bac_at_time(
 ) -> float:
     """Estimate BAC at time ``t`` using drink timing and absorption.
 
-    This is an explainable approximation for product estimation: each drink is
-    absorbed with the shared food-adjusted absorption curve, converted into BAC
-    display units, then reduced by beta from that drink's event time. Real
-    elimination acts on total body alcohol rather than independent drinks, so
-    response metadata names this approximation explicitly.
+    This is an explainable approximation for product estimation: total absorbed
+    alcohol at time ``t`` is converted into BAC display units, then reduced by
+    a single beta * t elimination term. This keeps elimination horizon behavior
+    monotonic with total consumed alcohol in the same session.
     """
-    from reversebeta import absorbed_grams, bac_from_grams
+    from reversebeta import bac_from_grams
 
     time = _coerce_finite_float(t)
     validate_positive_number(weight_kg, "weight_kg")
@@ -503,18 +502,13 @@ def event_aware_bac_at_time(
     r_clamped = clamp(r, MIN_R, MAX_R)
     beta_clamped = clamp(beta_per_hour, MIN_BETA_PER_HOUR, MAX_BETA_PER_HOUR)
     events, _, _ = normalize_drink_events(drink_events)
-    total_bac = 0.0
+    absorbed_total_grams = absorbed_alcohol_at_time(events, time, food_intake=food_intake)
+    if absorbed_total_grams <= 0:
+        return 0.0
 
-    for event in events:
-        drink_time = event["hours_from_session_start"]
-        absorbed = absorbed_grams(food_intake, event["grams_alcohol"], drink_time, time)
-        if absorbed <= 0:
-            continue
-        contribution_bac = bac_from_grams(absorbed, weight_kg, r_clamped)
-        eliminated_bac = beta_clamped * max(0.0, time - drink_time)
-        total_bac += max(0.0, contribution_bac - eliminated_bac)
-
-    return max(total_bac, 0.0)
+    absorbed_bac = bac_from_grams(absorbed_total_grams, weight_kg, r_clamped)
+    eliminated_bac = beta_clamped * time
+    return max(absorbed_bac - eliminated_bac, 0.0)
 
 
 def calculate_event_aware_bac_range(
@@ -564,7 +558,7 @@ def _curve_hours(
 ) -> list[float]:
     current = current_time_hours if current_time_hours is not None else 0.0
     if horizon_hours is None:
-        horizon = max(current + 4.0, last_drink_time + 8.0, 8.0)
+        horizon = max(current + 4.0, last_drink_time + 4.0, 4.0)
     else:
         horizon = horizon_hours
     horizon = clamp(horizon, max(current, 0.0), 24.0)
@@ -697,7 +691,7 @@ def generate_event_aware_bac_curve(
         })
 
     while near_zero_hour is None and hours[-1] < 24.0:
-        next_hour = min(24.0, round(hours[-1] + max(1.0, step), 4))
+        next_hour = min(24.0, round(hours[-1] + step, 4))
         hours.append(next_hour)
         values = calculate_event_aware_bac_range(
             events,

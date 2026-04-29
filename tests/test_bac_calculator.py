@@ -15,6 +15,9 @@ from BACCalculator import (
 
 
 class BACCalculatorTests(unittest.TestCase):
+    def _shot_events(self, count: int) -> list[dict[str, float]]:
+        return [{"grams_alcohol": 14.0, "hours_from_session_start": 0.0} for _ in range(count)]
+
     def test_zero_alcohol_returns_zero(self) -> None:
         self.assertEqual(calculate_bac(alc_g=0.0, weight_kg=70.0, r=0.6), 0.0)
 
@@ -166,6 +169,40 @@ class BACCalculatorTests(unittest.TestCase):
         no_food = event_aware_bac_at_time(events, 0.25, 70.0, 0.6, 0.015, food_intake="none")
         high_food = event_aware_bac_at_time(events, 0.25, 70.0, 0.6, 0.015, food_intake="high")
         self.assertLess(high_food, no_food)
+
+    def test_more_identical_shots_raise_peak_bac(self) -> None:
+        one = generate_event_aware_bac_curve(
+            self._shot_events(1), weight_kg=68.0, r=0.62, beta_per_hour=0.015, current_time_hours=0.0
+        )
+        three = generate_event_aware_bac_curve(
+            self._shot_events(3), weight_kg=68.0, r=0.62, beta_per_hour=0.015, current_time_hours=0.0
+        )
+        self.assertGreater(three["peak_bac"], one["peak_bac"])
+
+    def test_more_identical_shots_extend_near_zero_time(self) -> None:
+        one = generate_event_aware_bac_curve(
+            self._shot_events(1), weight_kg=68.0, r=0.62, beta_per_hour=0.015, current_time_hours=0.0
+        )
+        three = generate_event_aware_bac_curve(
+            self._shot_events(3), weight_kg=68.0, r=0.62, beta_per_hour=0.015, current_time_hours=0.0
+        )
+        five = generate_event_aware_bac_curve(
+            self._shot_events(5), weight_kg=68.0, r=0.62, beta_per_hour=0.015, current_time_hours=0.0
+        )
+        self.assertIsNotNone(one["estimated_near_zero_hour"])
+        self.assertIsNotNone(three["estimated_near_zero_hour"])
+        self.assertIsNotNone(five["estimated_near_zero_hour"])
+        self.assertGreater(three["estimated_near_zero_hour"], one["estimated_near_zero_hour"])
+        self.assertGreater(five["estimated_near_zero_hour"], three["estimated_near_zero_hour"])
+
+    def test_event_aware_curve_horizon_not_fixed_for_all_drink_counts(self) -> None:
+        one = generate_event_aware_bac_curve(
+            self._shot_events(1), weight_kg=68.0, r=0.62, beta_per_hour=0.015, current_time_hours=0.0
+        )
+        five = generate_event_aware_bac_curve(
+            self._shot_events(5), weight_kg=68.0, r=0.62, beta_per_hour=0.015, current_time_hours=0.0
+        )
+        self.assertGreater(five["curve"][-1]["hour"], one["curve"][-1]["hour"])
 
 
 if __name__ == "__main__":

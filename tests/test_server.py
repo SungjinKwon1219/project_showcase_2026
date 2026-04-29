@@ -477,6 +477,30 @@ class PredictEndpointLogicTests(unittest.TestCase):
         early_high_food = next(p for p in high_food["curve"] if p["hour"] == 0.5)
         self.assertLess(early_high_food["estimate"], early_no_food["estimate"])
 
+    def test_predict_more_identical_shots_extend_peak_and_near_zero(self):
+        def payload_for_shots(count):
+            p = self._valid_payload()
+            p["session"].update({
+                "hours_elapsed": 0.0,
+                "drink_events": [
+                    {"grams_alcohol": 14.0, "hours_from_session_start": 0.0}
+                    for _ in range(count)
+                ],
+                "grams_alcohol": 14.0 * count,
+                "standard_drinks": float(count),
+            })
+            return p
+
+        one = predict_from_payload(payload_for_shots(1))
+        three = predict_from_payload(payload_for_shots(3))
+        five = predict_from_payload(payload_for_shots(5))
+
+        self.assertGreater(three["peak_bac"], one["peak_bac"])
+        self.assertGreater(five["peak_bac"], three["peak_bac"])
+        self.assertGreater(three["estimated_near_zero_hour"], one["estimated_near_zero_hour"])
+        self.assertGreater(five["estimated_near_zero_hour"], three["estimated_near_zero_hour"])
+        self.assertGreater(five["curve"][-1]["hour"], one["curve"][-1]["hour"])
+
     def test_predict_invalid_drink_events_fall_back_without_crashing(self):
         p = self._valid_payload()
         p["session"]["drink_events"] = [
