@@ -39,6 +39,7 @@ SEVERE_FLAGS = {
     "felt_sober_not_after_effective_start",
     "final_bac_anchor_not_below_estimated_peak",
     "nonpositive_raw_implied_beta",
+    "raw_implied_beta_outside_plausible_range_clipped",
     "vomiting_reported_unreliable_for_personalization",
 }
 

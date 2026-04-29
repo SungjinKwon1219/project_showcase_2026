@@ -588,7 +588,7 @@
 <!-- ── MAIN ── -->
 <main class="main">
   <div class="profile-callout" id="profileCallout" role="status">
-    <span>You have not created a personalized profile on this device yet.
+    <span>You have not created a saved profile on this device yet.
       <a href="input.html">Create your profile</a> to help future estimates fit you better.</span>
   </div>
 
@@ -627,9 +627,9 @@
     </div>
     <div class="metric-card">
       <div class="metric-glow" style="background: var(--orange);"></div>
-      <div class="metric-label">Personalization</div>
+      <div class="metric-label">Limited personalization</div>
       <div class="metric-val" id="personalizationValue">—</div>
-      <div class="metric-change" id="personalizationDetail">Personalization not available yet.</div>
+      <div class="metric-change" id="personalizationDetail">No calibration signal active yet.</div>
     </div>
   </div>
 
@@ -688,28 +688,97 @@
   <!-- BOTTOM ROW -->
   <div class="bottom-grid">
 
-    <!-- Model personalization -->
-    <div class="card">
+    <!-- Limited personalization (compact default + details) -->
+    <div class="card" id="personalizationCard">
       <div class="card-header">
         <div>
-          <div class="card-title">Model Personalization</div>
-          <div class="card-sub">Not implemented yet</div>
+          <div class="card-title">Limited personalization</div>
+          <div class="card-sub">Calibration signals and baseline estimate adjustment (this device)</div>
         </div>
       </div>
-      <div class="radial-wrap">
-        <svg width="140" height="140" viewBox="0 0 140 140">
-          <circle cx="70" cy="70" r="56" fill="none" stroke="var(--border)" stroke-width="10"/>
-          <circle cx="70" cy="70" r="56" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="10"
-            stroke-dasharray="351.86" stroke-dashoffset="351.86" stroke-linecap="round"/>
-        </svg>
-        <div class="radial-center">
-          <div class="radial-val">—</div>
-          <div class="radial-label">Unavailable</div>
-        </div>
+      <p id="profileSummaryStatus" style="font-size:0.8rem;color:var(--muted-mid);line-height:1.45;margin-top:0.65rem;"></p>
+      <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0.65rem; margin-top:0.85rem;">
+        <div class="summary-card" style="padding:0.75rem;"><div class="sum-label">Feedback saved</div><div class="sum-val" id="profileSummaryFeedback" style="font-size:1.2rem;">0</div></div>
+        <div class="summary-card" style="padding:0.75rem;"><div class="sum-label">Usable calibration signals</div><div class="sum-val" id="profileSummaryUsable" style="font-size:1.2rem;">0</div></div>
       </div>
-      <p style="font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 0.5rem;">
-        Personalization is not implemented yet. Future versions may use validated post-session feedback to calibrate estimates.
-      </p>
+      <details style="margin-top:0.65rem;">
+        <summary style="cursor:pointer; color:var(--accent); font-size:0.76rem; font-weight:700;">Profile & completed sessions</summary>
+        <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0.6rem; margin-top:0.65rem;">
+          <div class="summary-card" style="padding:0.65rem;"><div class="sum-label">Baseline profile</div><div class="sum-val" id="profileSummaryBaseline" style="font-size:1.05rem;">—</div></div>
+          <div class="summary-card" style="padding:0.65rem;"><div class="sum-label">Completed sessions</div><div class="sum-val" id="profileSummaryCompleted" style="font-size:1.05rem;">0</div></div>
+        </div>
+      </details>
+      <details style="margin-top:0.5rem;">
+        <summary style="cursor:pointer; color:var(--muted); font-size:0.72rem; font-weight:600;">How limited personalization uses feedback</summary>
+        <p id="personalizationIntroBlurb" style="font-size:0.72rem; color:var(--muted-mid); line-height:1.45; margin-top:0.5rem;"></p>
+      </details>
+      <div style="margin-top:1rem; padding:0.75rem 0.85rem; border:1px solid rgba(200,240,77,0.16); border-radius:14px; background:rgba(200,240,77,0.045);">
+        <div style="font-size:0.68rem; color:var(--accent); font-weight:700; text-transform:uppercase; letter-spacing:0.6px;">Next best action</div>
+        <div id="profileActionTitle" style="font-family:'Syne',sans-serif; font-weight:700; font-size:0.94rem; margin-top:0.3rem;">—</div>
+        <p id="profileActionMessage" style="font-size:0.73rem; color:var(--muted-mid); line-height:1.45; margin-top:0.3rem;"></p>
+        <ul id="profileActionSteps" style="margin:0.45rem 0 0; padding-left:1.05rem; color:var(--muted); font-size:0.72rem; line-height:1.5;"></ul>
+        <a id="profileActionLink" href="#" style="display:none; margin-top:0.55rem; color:var(--accent); font-size:0.76rem; font-weight:700; text-decoration:none;"></a>
+      </div>
+      <div style="margin-top:0.85rem; padding:0.75rem 0.85rem; border:1px solid rgba(91,141,239,0.2); border-radius:14px; background:rgba(91,141,239,0.055);">
+        <label style="display:flex; gap:0.6rem; align-items:flex-start; cursor:pointer;">
+          <input id="limitedPersonalizationToggle" type="checkbox" style="margin-top:0.15rem;">
+          <span>
+            <span style="display:block; font-weight:700; font-size:0.82rem;">Apply limited personalization in BAC estimates</span>
+            <span id="limitedPersonalizationSettingText" style="display:block; color:var(--muted-mid); font-size:0.71rem; line-height:1.45; margin-top:0.2rem;"></span>
+          </span>
+        </label>
+      </div>
+      <details style="margin-top:0.85rem; border-top:1px solid var(--border); padding-top:0.75rem;">
+        <summary style="cursor:pointer; color:var(--accent); font-size:0.76rem; font-weight:700;">Reliability detail</summary>
+        <div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:flex-start; margin-top:0.6rem;">
+          <div>
+            <div id="reliabilityLabel" style="font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem;">—</div>
+            <p id="reliabilityMessage" style="font-size:0.72rem; color:var(--muted-mid); line-height:1.45; margin-top:0.35rem;"></p>
+          </div>
+          <span id="reliabilityBadge" class="pill pill-green" style="flex-shrink:0;">—</span>
+        </div>
+        <div id="reliabilityFactors" style="font-size:0.7rem; color:var(--muted); line-height:1.45; margin-top:0.45rem;"></div>
+      </details>
+      <details style="margin-top:0.65rem;">
+        <summary style="cursor:pointer; color:var(--accent); font-size:0.76rem; font-weight:700;">Calibration signal by session <span style="font-weight:400;color:var(--muted);" id="evidenceSectionHint"></span></summary>
+        <div style="display:flex; justify-content:flex-end; margin-bottom:0.35rem;"><a href="history.html" style="font-size:0.73rem; color:var(--accent); text-decoration:none; font-weight:700;">History →</a></div>
+        <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0.45rem;">
+          <div class="summary-card" style="padding:0.55rem;"><div class="sum-label">Used</div><div class="sum-val" id="evidenceUsedCount" style="font-size:0.95rem;">0</div></div>
+          <div class="summary-card" style="padding:0.55rem;"><div class="sum-label">Not used</div><div class="sum-val" id="evidenceUnusedCount" style="font-size:0.95rem;">0</div></div>
+          <div class="summary-card" style="padding:0.55rem;"><div class="sum-label">No signal</div><div class="sum-val" id="evidenceNoSignalCount" style="font-size:0.95rem;">0</div></div>
+        </div>
+        <div id="personalizationEvidenceList" style="display:flex; flex-direction:column; gap:0.45rem; margin-top:0.65rem;"></div>
+        <details id="personalizationEvidenceMore" style="display:none; margin-top:0.5rem;">
+          <summary style="cursor:pointer; color:var(--accent); font-size:0.74rem; font-weight:700;">More sessions</summary>
+          <div id="personalizationEvidenceMoreList" style="display:flex; flex-direction:column; gap:0.45rem; margin-top:0.45rem;"></div>
+        </details>
+        <p style="font-size:0.68rem; color:var(--muted); line-height:1.42; margin-top:0.6rem;">For estimate adjustment context only—not legal or medical interpretation.</p>
+      </details>
+      <details style="margin-top:0.65rem;">
+        <summary style="cursor:pointer; color:var(--accent); font-size:0.76rem; font-weight:700;">Latest calibration snapshot (technical)</summary>
+        <div style="display:flex; flex-direction:column; gap:0.45rem; margin-top:0.65rem; font-size:0.74rem;">
+          <div style="display:flex; justify-content:space-between; gap:1rem;"><span style="color:var(--muted);">Base β (baseline estimate)</span><span id="profileSummaryBaseBeta">—</span></div>
+          <div style="display:flex; justify-content:space-between; gap:1rem;"><span style="color:var(--muted);">Effective β (with adjustment)</span><span id="profileSummaryEffectiveBeta">—</span></div>
+          <div style="display:flex; justify-content:space-between; gap:1rem;"><span style="color:var(--muted);">Usable source count</span><span id="profileSummaryUsableSources">0</span></div>
+          <div><span style="color:var(--muted);">Latest message:</span><br><span id="profileSummaryMessage">—</span></div>
+          <div><span style="color:var(--muted);">Latest rejection codes:</span><br><span id="profileSummaryReasons">—</span></div>
+        </div>
+      </details>
+      <details style="margin-top:0.65rem;">
+        <summary style="cursor:pointer; color:var(--muted); font-size:0.74rem; font-weight:700;">Quality note (from saved estimates)</summary>
+        <p id="personalizationQualityNote" style="font-size:0.72rem; color:var(--muted-mid); line-height:1.45; margin-top:0.45rem;"></p>
+      </details>
+      <details style="margin-top:0.65rem;">
+        <summary style="cursor:pointer; color:var(--accent); font-size:0.76rem; font-weight:700;">Manage local personalization data</summary>
+        <p style="font-size:0.7rem; color:var(--muted); line-height:1.42; margin:0.45rem 0 0.55rem;">This device only. Does not delete sessions or profile. Calculator status updates on the next estimate request.</p>
+        <div style="display:flex; flex-wrap:wrap; gap:0.45rem; align-items:center;">
+          <button type="button" class="btn-sm btn-sm-ghost" id="btnPersResetSettings">Reset settings</button>
+          <button type="button" class="btn-sm btn-sm-ghost" id="btnPersClearSnapshots">Clear prediction snapshots</button>
+          <button type="button" class="btn-sm btn-sm-ghost" id="btnPersClearCalibration">Clear calibration from feedback</button>
+          <button type="button" class="btn-sm btn-sm-ghost" id="btnPersClearAll" style="border-color:rgba(255,154,154,0.35);color:#FFB4B4;">Clear all personalization data</button>
+        </div>
+        <p id="personalizationDataControlsMsg" role="status" style="font-size:0.7rem;color:var(--accent);margin-top:0.5rem;min-height:1.15em;"></p>
+      </details>
     </div>
 
     <!-- Session context -->
@@ -778,7 +847,7 @@
 
   function hasCompletedProfile(profile) {
     if (!profile || typeof profile !== 'object') return false;
-    var sexOk = profile.sex === 'male' || profile.sex === 'female';
+    var sexOk = profile.sex === 'male' || profile.sex === 'female' || profile.sex === 'other';
     var ageOk = Boolean(profile.age_band) || finiteNumber(profile.age_years) != null;
     var heightOk = finiteNumber(profile.height_in) != null || finiteNumber(profile.height_cm) != null;
     var weightOk = finiteNumber(profile.weight_lbs) != null || finiteNumber(profile.weight_kg) != null;
@@ -877,6 +946,30 @@
     return best;
   }
 
+  function latestAppliedBetaCalibration(sessions) {
+    var latest = null;
+    sessions.forEach(function (session) {
+      allPredictionSnapshots(session).forEach(function (snap) {
+        var payload = snap.response_payload || {};
+        var model = payload.model || {};
+        var betaMeta = snap.beta_metadata || payload.beta_metadata || {};
+        var sessionsUsed = finiteNumber(model.sessions_used);
+        if (sessionsUsed == null) sessionsUsed = finiteNumber(betaMeta.sessions_used);
+        var active = model.personalization === 'bayesian_shrinkage_active' || (sessionsUsed != null && sessionsUsed > 0);
+        if (!active) return;
+        var created = new Date(snap.created_at || session.updated_at || session.started_at || 0).getTime();
+        if (!latest || created > latest.created) {
+          latest = {
+            created: created,
+            sessionsUsed: sessionsUsed || 0,
+            betaSource: model.beta_source || betaMeta.source || 'limited beta calibration'
+          };
+        }
+      });
+    });
+    return latest;
+  }
+
   function formatBacRangeOrValue(estimate) {
     if (!estimate) return 'No estimate yet';
     if (estimate.low != null && estimate.high != null && estimate.low !== estimate.high) {
@@ -937,7 +1030,7 @@
     el.innerHTML = parts.join(' <span style="color:var(--border-bright);">·</span> ');
   }
 
-  function renderMetrics(profile, hasProfile, sessions) {
+  function renderMetrics(profile, hasProfile, sessions, personalizationSummary) {
     updateMetric(
       'profileStatusValue',
       'profileStatusDetail',
@@ -966,12 +1059,17 @@
       peak == null ? '' : (peak < 0.08 ? 'safe' : peak < 0.15 ? 'warn' : 'danger')
     );
 
+    var betaCalibration = personalizationSummary && personalizationSummary.latest_personalization_active;
     updateMetric(
       'personalizationValue',
       'personalizationDetail',
-      '—',
-      'Personalization not available yet.',
-      ''
+      betaCalibration ? 'On' : '—',
+      betaCalibration
+        ? 'Calibration signals applied to estimate adjustment.'
+        : (personalizationSummary && personalizationSummary.sessions_with_feedback > 0
+          ? 'Feedback saved; no active calibration signal from recent estimates.'
+          : 'Baseline estimate only—no calibration signal applied.'),
+      betaCalibration ? 'safe' : ''
     );
   }
 
@@ -1066,6 +1164,238 @@
     body.innerHTML = renderEmptyState('This feature is not available yet', 'Future versions may summarize validated post-session feedback here.', '', '');
   }
 
+  function formatBeta(value) {
+    return value == null ? '—' : Number(value).toFixed(4);
+  }
+
+  function evidenceReasonText(row) {
+    if (!row) return '';
+    if (row.usable_for_calibration) return 'Explicitly usable calibration signal.';
+    if (Array.isArray(row.rejection_reasons) && row.rejection_reasons.length) {
+      return 'Excluded because ' + row.rejection_reasons.map(function(reason) {
+        return String(reason).replace(/_/g, ' ');
+      }).join(', ') + '.';
+    }
+    return row.calibration_message || 'Feedback saved; no calibration signal recorded.';
+  }
+
+  function evidenceRowHtml(row) {
+    var color = row.usable_for_calibration ? 'var(--accent)' :
+      row.calibration_status === 'calibration_unavailable' ? 'var(--orange)' : 'var(--muted-mid)';
+    var betaText = row.usable_for_calibration && row.implied_beta != null
+      ? ' · β ' + Number(row.implied_beta).toFixed(4)
+      : '';
+    return '<div style="border:1px solid var(--border); border-radius:12px; padding:0.7rem; background:rgba(255,255,255,0.025);">' +
+      '<div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:flex-start;">' +
+        '<div><div style="font-weight:700; font-size:0.78rem;">' + esc(row.display_date || 'Session') + '</div>' +
+        '<div style="font-size:0.68rem; color:var(--muted); margin-top:0.15rem;">' + esc(row.session_id || '—') + '</div></div>' +
+        '<div style="font-size:0.7rem; color:' + color + '; font-weight:700; text-align:right;">' + esc(row.calibration_status_label) + esc(betaText) + '</div>' +
+      '</div>' +
+      '<div style="font-size:0.72rem; color:var(--muted-mid); line-height:1.4; margin-top:0.45rem;">' + esc(evidenceReasonText(row)) + '</div>' +
+      '<div style="font-size:0.68rem; color:var(--muted); margin-top:0.35rem;">Log: ' + esc(row.drink_log_confidence) + ' · Timing: ' + esc(row.drink_timing_confidence) + ' · Missed drinks: ' + esc(row.missed_drinks) + '</div>' +
+    '</div>';
+  }
+
+  function renderPersonalizationEvidence(rows) {
+    rows = Array.isArray(rows) ? rows : [];
+    var used = rows.filter(function(row) { return row.usable_for_calibration; }).length;
+    var unused = rows.filter(function(row) { return row.calibration_status === 'calibration_unavailable'; }).length;
+    var noSignal = rows.filter(function(row) { return row.calibration_status === 'no_calibration_signal_recorded'; }).length;
+    var setText = function(id, value) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = String(value);
+    };
+    setText('evidenceUsedCount', used);
+    setText('evidenceUnusedCount', unused);
+    setText('evidenceNoSignalCount', noSignal);
+
+    var list = document.getElementById('personalizationEvidenceList');
+    var more = document.getElementById('personalizationEvidenceMore');
+    var moreList = document.getElementById('personalizationEvidenceMoreList');
+    if (!list) return;
+    var hint = document.getElementById('evidenceSectionHint');
+    if (hint) hint.textContent = rows.length ? '(' + rows.length + ')' : '';
+
+    if (rows.length === 0) {
+      list.innerHTML = '<div style="font-size:0.72rem; color:var(--muted); line-height:1.45; padding:0.65rem; border:1px dashed var(--border); border-radius:12px;">No feedback rows yet—save feedback on completed sessions in History.</div>';
+      if (more) more.style.display = 'none';
+      return;
+    }
+    list.innerHTML = rows.slice(0, 5).map(evidenceRowHtml).join('');
+    if (more && moreList && rows.length > 5) {
+      more.style.display = 'block';
+      moreList.innerHTML = rows.slice(5).map(evidenceRowHtml).join('');
+    } else if (more) {
+      more.style.display = 'none';
+    }
+  }
+
+  function renderReliabilitySummary(reliability) {
+    var setText = function(id, text) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    if (!reliability) {
+      setText('reliabilityLabel', '—');
+      setText('reliabilityBadge', '—');
+      setText('reliabilityMessage', '');
+      var fallbackFactors = document.getElementById('reliabilityFactors');
+      if (fallbackFactors) fallbackFactors.textContent = '';
+      return;
+    }
+    setText('reliabilityLabel', reliability.reliability_label);
+    setText('reliabilityBadge', reliability.reliability_level.replace(/_/g, ' '));
+    setText('reliabilityMessage', reliability.reliability_message);
+    var factors = document.getElementById('reliabilityFactors');
+    if (factors) {
+      var limiting = Array.isArray(reliability.limiting_factors) ? reliability.limiting_factors : [];
+      var strengths = Array.isArray(reliability.strengths) ? reliability.strengths : [];
+      var parts = [];
+      if (strengths.length) parts.push('Stronger signal: ' + strengths.join(' '));
+      if (limiting.length) parts.push('Limiting factors: ' + limiting.join(' '));
+      factors.textContent = parts.join(' ');
+    }
+  }
+
+  function renderPersonalizationSettings() {
+    if (typeof SaferSessionStorage === 'undefined' || typeof SaferSessionStorage.getPersonalizationSettings !== 'function') return;
+    var settings = SaferSessionStorage.getPersonalizationSettings();
+    var toggle = document.getElementById('limitedPersonalizationToggle');
+    var text = document.getElementById('limitedPersonalizationSettingText');
+    if (!toggle) return;
+    toggle.checked = settings.limited_personalization_enabled !== false;
+    if (text) {
+      text.textContent = toggle.checked
+        ? 'On: may use calibration signals for estimate adjustment. Feedback stays saved on this device.'
+        : 'Off: baseline elimination estimate only. Feedback and calibration evidence stay saved.';
+    }
+  }
+
+  function bindPersonalizationSettings() {
+    var toggle = document.getElementById('limitedPersonalizationToggle');
+    if (!toggle || typeof SaferSessionStorage === 'undefined' || typeof SaferSessionStorage.savePersonalizationSettings !== 'function') return;
+    toggle.addEventListener('change', function () {
+      SaferSessionStorage.savePersonalizationSettings({
+        limited_personalization_enabled: toggle.checked
+      });
+      refreshPersonalizationSection();
+    });
+  }
+
+  function setPersonalizationDataControlsMsg(text) {
+    var el = document.getElementById('personalizationDataControlsMsg');
+    if (el) el.textContent = text || '';
+  }
+
+  function refreshPersonalizationSection() {
+    if (typeof SaferSessionStorage === 'undefined') return;
+    var profile = readSavedProfile();
+    var hasProfile = hasCompletedProfile(profile);
+    var sessions = readSavedSessions();
+    var personalizationSummary = typeof SaferSessionStorage.getPersonalizationProfileSummary === 'function'
+      ? SaferSessionStorage.getPersonalizationProfileSummary()
+      : null;
+    var evidenceRows = typeof SaferSessionStorage.getPersonalizationEvidenceRows === 'function'
+      ? SaferSessionStorage.getPersonalizationEvidenceRows()
+      : [];
+    var reliabilitySummary = typeof SaferSessionStorage.getPersonalizationReliabilitySummary === 'function'
+      ? SaferSessionStorage.getPersonalizationReliabilitySummary()
+      : null;
+    renderPersonalizationCard(personalizationSummary);
+    renderReliabilitySummary(reliabilitySummary);
+    renderPersonalizationEvidence(evidenceRows);
+    renderPersonalizationSettings();
+    renderMetrics(profile, hasProfile, sessions, personalizationSummary);
+  }
+
+  function bindPersonalizationDataControls() {
+    if (typeof SaferSessionStorage === 'undefined') return;
+    var S = SaferSessionStorage;
+    function wire(id, message, run) {
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        if (!window.confirm(message)) return;
+        run();
+        setPersonalizationDataControlsMsg('Done. Changes are saved on this device.');
+        refreshPersonalizationSection();
+      });
+    }
+    wire('btnPersResetSettings',
+      'Reset personalization settings to defaults?\n\nThis turns “Use limited personalization in BAC estimates” back on and restores default options. It does not delete sessions, feedback text, or calibration metadata already saved on feedback.',
+      function () { S.resetPersonalizationSettingsToDefault(); });
+    wire('btnPersClearSnapshots',
+      'Clear personalization metadata from stored prediction snapshots?\n\nSession history remains. Only saved limited-personalization summary blocks in snapshots are removed. Feedback and calibration metadata in History are not deleted.',
+      function () { S.clearPersonalizationPredictionSnapshots(); });
+    wire('btnPersClearCalibration',
+      'Clear calibration evidence from saved feedback?\n\nYour sessions and subjective feedback (notes, confidence fields, symptoms) remain. Implied-beta calibration metadata will be removed and will no longer affect future estimates.',
+      function () { S.clearCalibrationEvidence(); });
+    wire('btnPersClearAll',
+      'Clear all personalization data on this device?\n\nThis resets personalization settings to defaults, removes calibration metadata from feedback, and strips personalization summaries from prediction snapshots. Drinking sessions and your profile stay. Subjective feedback text is kept.',
+      function () { S.clearAllPersonalizationData(); });
+  }
+
+  function renderPersonalizationCard(summary) {
+    if (!summary) return;
+    var limitedOn = typeof SaferSessionStorage !== 'undefined' && typeof SaferSessionStorage.isLimitedPersonalizationEnabled === 'function'
+      ? SaferSessionStorage.isLimitedPersonalizationEnabled()
+      : true;
+    var action = typeof SaferSessionStorage !== 'undefined' && typeof SaferSessionStorage.getPersonalizationNextBestAction === 'function'
+      ? SaferSessionStorage.getPersonalizationNextBestAction(summary)
+      : null;
+    var setText = function(id, text) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    setText('profileSummaryBaseline', summary.profile_completed ? 'Complete' : (summary.has_profile ? 'Incomplete' : 'No profile'));
+    setText('profileSummaryCompleted', String(summary.completed_sessions));
+    setText('profileSummaryFeedback', String(summary.sessions_with_feedback));
+    setText('profileSummaryUsable', String(summary.sessions_with_usable_calibration));
+    setText('profileSummaryBaseBeta', formatBeta(summary.latest_base_beta));
+    setText('profileSummaryEffectiveBeta', formatBeta(summary.latest_effective_beta));
+    setText('profileSummaryUsableSources', String(summary.usable_source_count));
+    setText('profileSummaryMessage', summary.latest_calibration_message || 'No calibration signal recorded yet.');
+    setText('profileSummaryReasons', Array.isArray(summary.latest_rejection_reasons) && summary.latest_rejection_reasons.length
+      ? summary.latest_rejection_reasons.map(function(reason) { return String(reason).replace(/_/g, ' '); }).join(', ')
+      : '—');
+
+    var status = document.getElementById('profileSummaryStatus');
+    if (status) {
+      if (!limitedOn) {
+        status.textContent = 'Status: Limited personalization off—estimates use the baseline elimination estimate (calibration signals stay saved locally).';
+      } else {
+        status.textContent = summary.latest_personalization_active
+          ? 'Status: Calibration signals applied to estimate adjustment where available.'
+          : 'Status: Baseline elimination estimate—no calibration signal from recent estimates.';
+      }
+    }
+    var intro = document.getElementById('personalizationIntroBlurb');
+    if (intro) {
+      intro.textContent = 'Only high-confidence feedback can contribute a calibration signal. Missed drinks, uncertain timing, vomiting, blackout, or memory gaps are kept as feedback but not used for calibration.';
+    }
+    var qual = document.getElementById('personalizationQualityNote');
+    if (qual) qual.textContent = summary.data_quality_message || '—';
+
+    if (action) {
+      setText('profileActionTitle', action.title);
+      setText('profileActionMessage', action.message);
+      var steps = document.getElementById('profileActionSteps');
+      if (steps) {
+        steps.innerHTML = (action.recommended_steps || []).slice(0, 4).map(function(step) {
+          return '<li>' + esc(step) + '</li>';
+        }).join('');
+      }
+      var link = document.getElementById('profileActionLink');
+      if (link && action.href && action.cta_label) {
+        link.href = action.href;
+        link.textContent = action.cta_label + ' →';
+        link.style.display = 'inline-block';
+      } else if (link) {
+        link.style.display = 'none';
+      }
+    }
+  }
+
   function exportSessionsCsv(sessions) {
     if (!sessions.length) return;
     var rows = [['session_id', 'title', 'status', 'started_at', 'ended_at', 'drink_events', 'latest_estimate', 'peak_bac']];
@@ -1104,14 +1434,27 @@
     var profile = readSavedProfile();
     var hasProfile = hasCompletedProfile(profile);
     var sessions = readSavedSessions();
+    var personalizationSummary = typeof SaferSessionStorage !== 'undefined' && typeof SaferSessionStorage.getPersonalizationProfileSummary === 'function'
+      ? SaferSessionStorage.getPersonalizationProfileSummary()
+      : null;
+    var evidenceRows = typeof SaferSessionStorage !== 'undefined' && typeof SaferSessionStorage.getPersonalizationEvidenceRows === 'function'
+      ? SaferSessionStorage.getPersonalizationEvidenceRows()
+      : [];
+    var reliabilitySummary = typeof SaferSessionStorage !== 'undefined' && typeof SaferSessionStorage.getPersonalizationReliabilitySummary === 'function'
+      ? SaferSessionStorage.getPersonalizationReliabilitySummary()
+      : null;
 
     renderHeader(profile, hasProfile);
     renderProfileCallout(hasProfile);
     renderPersistSummary(hasProfile, sessions);
-    renderMetrics(profile, hasProfile, sessions);
+    renderMetrics(profile, hasProfile, sessions, personalizationSummary);
     renderBacHistory(sessions);
     renderRecentSessions(sessions);
     renderSessionContext(sessions);
+    renderPersonalizationCard(personalizationSummary);
+    renderReliabilitySummary(reliabilitySummary);
+    renderPersonalizationEvidence(evidenceRows);
+    renderPersonalizationSettings();
 
     var exportBtn = document.getElementById('exportSessionsBtn');
     if (exportBtn) {
@@ -1119,6 +1462,8 @@
       exportBtn.title = sessions.length === 0 ? 'No saved sessions to export' : 'Export saved sessions';
       exportBtn.addEventListener('click', function () { exportSessionsCsv(sessions); });
     }
+    bindPersonalizationSettings();
+    bindPersonalizationDataControls();
   }
 
   initDashboard();

@@ -1,11 +1,15 @@
 """Lightweight HTTP API for BAC prediction endpoints.
 
 Endpoints:
-    POST /predict          — Full BAC prediction with Bayesian beta personalization
+    POST /predict          — BAC prediction with optional limited beta calibration
     POST /r-coefficient    — r estimation only (legacy compatibility)
 
 Run locally:
-    python3 server.py
+    python3 server.py      # listens on http://0.0.0.0:8000 by default
+
+Serve static HTML separately (different port), e.g. from frontend/:  python3 -m http.server 8080
+Open http://localhost:8080/bac-calculator.html — API calls use http://localhost:8000 (API sends Access-Control-Allow-Origin: *).
+See docs/PERSONALIZATION_BROWSER_QA_RUNBOOK.md for manual QA steps.
 """
 
 from __future__ import annotations
@@ -37,6 +41,8 @@ PERSONALIZATION_STATUS_ACTIVE  = "bayesian_shrinkage_active"
 PERSONALIZATION_STATUS_NONE    = "not_enabled"
 MIN_BODY_FAT_PERCENT  = 3.0
 MAX_BODY_FAT_PERCENT  = 65.0
+MAX_NEAR_BASELINE_HOURS = 24.0
+CALIBRATION_TYPE = "limited_beta_only"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────
@@ -53,6 +59,15 @@ def _as_float_optional(value: Any, default: float) -> float:
     if not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value):
         return float(value)
     return default
+
+def _coerce_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
 
 def _first_present(mapping: dict[str, Any], names: list[str]) -> Any:
     for name in names:
@@ -163,6 +178,50 @@ def _beta_metadata_response(beta_result: dict[str, Any], api_excluded: int, warn
         "warnings": combined_warnings,
     }
 
+def _personalization_summary(
+    beta_metadata: dict[str, Any],
+    source_count: int,
+    *,
+    disabled_by_user: bool = False,
+    available_usable_count: int | None = None,
+) -> dict[str, Any]:
+    usable_count = int(beta_metadata.get("sessions_used", 0))
+    if available_usable_count is not None:
+        usable_count = int(available_usable_count)
+    base_beta = float(beta_metadata.get("population_beta", beta_metadata.get("value", 0.015)))
+    effective_beta = base_beta if disabled_by_user else float(beta_metadata.get("value", base_beta))
+    active = (
+        not disabled_by_user
+        and usable_count > 0
+        and not math.isclose(base_beta, effective_beta, rel_tol=0.0, abs_tol=1e-9)
+    )
+    return {
+        "calibration_type": CALIBRATION_TYPE,
+        "active": active,
+        "disabled_by_user": bool(disabled_by_user),
+        "source_count": int(source_count),
+        "usable_source_count": usable_count,
+        "base_beta": round(base_beta, 6),
+        "effective_beta": round(effective_beta, 6),
+        "message": (
+            "Limited personalization is turned off. Using baseline elimination estimate."
+            if disabled_by_user else
+            "Using limited beta calibration from high-confidence feedback."
+            if active else
+            "Personalization is not active yet."
+        ),
+    }
+
+def _beta_history_source_count(history: dict[str, Any]) -> int:
+    entries = history.get("session_implied_betas", [])
+    return len(entries) if isinstance(entries, list) else 0
+
+def _limited_personalization_enabled(payload: dict[str, Any]) -> bool:
+    settings = payload.get("personalization_settings")
+    if not isinstance(settings, dict):
+        return True
+    return settings.get("limited_personalization_enabled") is not False
+
 def _extract_drink_events_for_implied_beta(payload: dict[str, Any]) -> tuple[list[Any], list[Any], list[str]]:
     warnings: list[str] = []
     drink_events = payload.get("drink_events")
@@ -191,29 +250,129 @@ def _extract_drink_events_for_implied_beta(payload: dict[str, Any]) -> tuple[lis
 def _extract_profile_for_implied_beta(payload: dict[str, Any]) -> tuple[Any, Any]:
     profile = payload.get("profile_snapshot")
     if not isinstance(profile, dict):
+        profile = payload.get("profile")
+    if not isinstance(profile, dict):
         profile = {}
     return (
         profile.get("weight_kg", payload.get("weight_kg")),
         profile.get("r", payload.get("r")),
     )
 
+def _as_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "y"}
+    return False
+
+def _normalize_missed_drinks(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    aliases = {
+        "no": "no",
+        "none": "no",
+        "false": "no",
+        "some": "some",
+        "yes": "some",
+        "unsure": "unknown",
+        "many": "many",
+        "unknown": "unknown",
+    }
+    return aliases.get(normalized)
+
+def _normalize_confidence(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    return normalized if normalized in {"high", "medium", "low", "unknown"} else None
+
 def _extract_review_for_implied_beta(payload: dict[str, Any]) -> dict[str, Any]:
     review = payload.get("review")
     if not isinstance(review, dict):
         review = {}
     return {
-        "felt_sober_hours": review.get("felt_sober_hours", payload.get("felt_sober_hours")),
+        "felt_sober_hours": _first_present(
+            review,
+            ["near_baseline_hours", "felt_sober_hours"],
+        ) if any(k in review for k in ("near_baseline_hours", "felt_sober_hours")) else _first_present(
+            payload,
+            ["near_baseline_hours", "felt_sober_hours"],
+        ),
         "food_intake": review.get("food_intake", payload.get("food_intake", "none")),
         "final_bac_anchor": review.get("final_bac_anchor", payload.get("final_bac_anchor", 0.02)),
-        "blackout": review.get("blackout", payload.get("blackout", False)),
-        "vomited": review.get("vomited", payload.get("vomited", False)),
+        "blackout": _as_bool(review.get("blackout", payload.get("blackout", False))),
+        "vomited": _as_bool(_first_present(review, ["vomited", "vomiting"]) if any(k in review for k in ("vomited", "vomiting")) else _first_present(payload, ["vomited", "vomiting"])),
+        "memory_gap": _as_bool(review.get("memory_gap", payload.get("memory_gap", False))),
+        "missed_drinks": _normalize_missed_drinks(review.get("missed_drinks", payload.get("missed_drinks"))),
+        "drink_log_confidence": _normalize_confidence(review.get("drink_log_confidence", payload.get("drink_log_confidence"))),
+        "drink_timing_confidence": _normalize_confidence(_first_present(review, ["drink_timing_confidence", "timing_confidence"]) if any(k in review for k in ("drink_timing_confidence", "timing_confidence")) else _first_present(payload, ["drink_timing_confidence", "timing_confidence"])),
     }
+
+def _calibration_message(reason: str) -> str:
+    messages = {
+        "usable": "High-confidence feedback produced a limited beta calibration signal.",
+        "missed_drinks_not_no": "Calibration signal unavailable because missed or unlogged drinks were reported or unknown.",
+        "drink_log_confidence_not_high": "Calibration signal unavailable because drink log confidence was not high.",
+        "drink_timing_confidence_not_high": "Calibration signal unavailable because drink timing confidence was not high.",
+        "vomiting_reported": "Calibration signal unavailable because vomiting makes this feedback unreliable for beta calibration.",
+        "blackout_reported": "Calibration signal unavailable because blackout makes this feedback unreliable for beta calibration.",
+        "memory_gap_reported": "Calibration signal unavailable because memory gaps make this feedback unreliable for beta calibration.",
+        "near_baseline_hours_invalid": f"Calibration signal unavailable because near-baseline timing must be greater than 0 and no more than {MAX_NEAR_BASELINE_HOURS:g} hours.",
+    }
+    return messages.get(reason, "Calibration signal unavailable for this session.")
+
+def _unusable_calibration_result(
+    reason: str,
+    *,
+    rejection_reasons: list[str] | None = None,
+    validity_flags: list[str] | None = None,
+    warnings: list[str] | None = None,
+) -> dict[str, Any]:
+    reasons = rejection_reasons or [reason]
+    flags = list(validity_flags or [])
+    for item in reasons:
+        if item not in flags:
+            flags.append(item)
+    return {
+        "usable_for_personalization": False,
+        "implied_beta": None,
+        "raw_implied_beta": None,
+        "reason": reason,
+        "message": _calibration_message(reason),
+        "rejection_reasons": reasons,
+        "calibration_type": CALIBRATION_TYPE,
+        "confidence": 0.0,
+        "validity_flags": flags,
+        "warnings": list(warnings or []),
+        "method": "event_aware_absorption_reverse_beta_v1",
+    }
+
+def _confidence_gate_reasons(review: dict[str, Any]) -> list[str]:
+    reasons: list[str] = []
+    if review["missed_drinks"] != "no":
+        reasons.append("missed_drinks_not_no")
+    if review["drink_log_confidence"] != "high":
+        reasons.append("drink_log_confidence_not_high")
+    if review["drink_timing_confidence"] != "high":
+        reasons.append("drink_timing_confidence_not_high")
+    if review["vomited"]:
+        reasons.append("vomiting_reported")
+    if review["blackout"]:
+        reasons.append("blackout_reported")
+    if review["memory_gap"]:
+        reasons.append("memory_gap_reported")
+
+    near_baseline = _coerce_float(review["felt_sober_hours"])
+    if near_baseline is None or near_baseline <= 0 or near_baseline > MAX_NEAR_BASELINE_HOURS:
+        reasons.append("near_baseline_hours_invalid")
+    return reasons
 
 
 # ── /predict logic ────────────────────────────────────────────────────────
 
 def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    """Validate request payload and return a full Bayesian-updated BAC prediction.
+    """Validate request payload and return a BAC prediction.
 
     Request shape:
     {
@@ -236,9 +395,9 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
       }
     }
 
-    The history.session_implied_betas list should contain values produced by
-    implied_beta_from_session() for each completed + reviewed past session.
-    The Bayesian shrinkage estimator weights these against the demographic prior.
+    The history.session_implied_betas list should contain beta-only signals
+    from high-confidence feedback. The shrinkage estimator weights these
+    against the demographic prior; this is not full model personalization.
     """
     if not isinstance(payload, dict):
         raise ValueError("Request body must be a JSON object.")
@@ -296,9 +455,11 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
         fat=fat_bracket,
     )
 
-    # ── beta estimation (demographic prior + Bayesian personalization) ─────
+    # ── beta estimation (demographic prior + limited beta calibration) ─────
     # Beta models elimination rate. It intentionally uses age, BMI,
     # drinks/week, and usable implied-beta history, not sex or body fat.
+    # session_implied_betas is beta-only evidence from gated feedback; it is
+    # not full model personalization and must remain clamped/exclusion-gated.
     demographic_population_beta = population_beta_prior(
         age=age,
         weight_kg=weight,
@@ -306,14 +467,42 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
         drinks_per_week=dpw,
     )
     observed_betas, api_excluded, beta_warnings = _extract_beta_history(history)
-    beta_result = estimate_personalized_beta(
+    personalized_beta_result = estimate_personalized_beta(
         observed_betas=observed_betas,
         population_beta=demographic_population_beta,
         min_beta=MIN_BETA_PER_HOUR,
         max_beta=MAX_BETA_PER_HOUR,
     )
+    personalization_enabled = _limited_personalization_enabled(payload)
+    if personalization_enabled:
+        beta_result = personalized_beta_result
+    else:
+        beta_result = {
+            "beta": demographic_population_beta,
+            "source": "population",
+            "sessions_used": 0,
+            "sessions_excluded": personalized_beta_result.get("sessions_excluded", 0),
+            "population_beta": demographic_population_beta,
+            "observed_mean": None,
+            "observed_sd": None,
+            "posterior_beta": None,
+            "population_blend_weight": personalized_beta_result.get("population_blend_weight", 0.10),
+            "personal_weight": 0.0,
+            "population_weight": 1.0,
+            "min_beta": MIN_BETA_PER_HOUR,
+            "max_beta": MAX_BETA_PER_HOUR,
+            "warnings": list(personalized_beta_result.get("warnings", [])) + [
+                "limited_personalization_disabled_by_user"
+            ],
+        }
     beta_per_hour = float(beta_result["beta"])
     beta_metadata = _beta_metadata_response(beta_result, api_excluded, beta_warnings)
+    personalization_summary = _personalization_summary(
+        beta_metadata,
+        _beta_history_source_count(history),
+        disabled_by_user=not personalization_enabled,
+        available_usable_count=int(personalized_beta_result.get("sessions_used", 0)),
+    )
 
     # ── BAC range + backend-owned curve ───────────────────────────────────
     food_intake = session.get("food_intake", payload.get("food_intake", "none"))
@@ -387,6 +576,7 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "prior_weight_pct":    prior_weight_pct,
             "personal_weight_pct": personal_weight_pct,
         },
+        "personalization": personalization_summary,
         "beta_metadata": beta_metadata,
         "bac": {
             "low":      round(float(bac["low"]),      6),
@@ -422,13 +612,28 @@ def predict_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def implied_beta_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    """Compute event-aware session-implied beta metadata after review."""
+    """Compute limited beta calibration metadata after post-session feedback.
+
+    Current schema accepts profile/profile_snapshot, drink_events, near-baseline
+    timing, and explicit log-confidence fields. Legacy grams_alcohol fields are
+    still parsed, but missing confidence context is not treated as high quality.
+    """
     if not isinstance(payload, dict):
         raise ValueError("Request body must be a JSON object.")
 
-    grams_by_drink, drink_times, warnings = _extract_drink_events_for_implied_beta(payload)
-    weight_kg, r = _extract_profile_for_implied_beta(payload)
     review = _extract_review_for_implied_beta(payload)
+    gate_reasons = _confidence_gate_reasons(review)
+    if gate_reasons:
+        return _unusable_calibration_result(gate_reasons[0], rejection_reasons=gate_reasons)
+
+    try:
+        grams_by_drink, drink_times, warnings = _extract_drink_events_for_implied_beta(payload)
+    except ValueError as exc:
+        message = str(exc)
+        reason = "missing_drink_events" if "drink_events or grams_alcohol" in message else message.replace(" ", "_").replace(".", "").lower()
+        return _unusable_calibration_result(reason)
+
+    weight_kg, r = _extract_profile_for_implied_beta(payload)
     result = estimate_implied_beta_from_session(
         grams_by_drink=grams_by_drink,
         drink_times_hours=drink_times,
@@ -438,8 +643,8 @@ def implied_beta_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
         r=r,
         prior_beta=payload.get("prior_beta", 0.015),
         final_bac_anchor=review["final_bac_anchor"],
-        blackout=review["blackout"] is True,
-        vomited=review["vomited"] is True,
+        blackout=False,
+        vomited=False,
     )
 
     validity_flags = result.setdefault("validity_flags", [])
@@ -447,6 +652,11 @@ def implied_beta_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if warning not in validity_flags:
             validity_flags.append(warning)
     result["warnings"] = warnings
+    rejection_reasons = [flag for flag in validity_flags if not result.get("usable_for_personalization")]
+    result["calibration_type"] = CALIBRATION_TYPE
+    result["rejection_reasons"] = rejection_reasons
+    result["reason"] = "usable" if result.get("usable_for_personalization") else (rejection_reasons[0] if rejection_reasons else "unusable")
+    result["message"] = _calibration_message(result["reason"])
     result["instructions"] = (
         "Store this result with the reviewed session. Include implied_beta in "
         "future /predict history only when usable_for_personalization is true."
@@ -525,7 +735,7 @@ class BACRequestHandler(BaseHTTPRequestHandler):
 def run_server() -> None:
     server = HTTPServer((HOST, PORT), BACRequestHandler)
     print(f"BAC API listening at http://{HOST}:{PORT}")
-    print(f"  POST /predict        — BAC prediction (Bayesian personalization)")
+    print(f"  POST /predict        — BAC prediction (limited beta calibration)")
     print(f"  POST /implied-beta   — Back-calculate session beta for review storage")
     print(f"  POST /r-coefficient  — r estimation only (legacy)")
     server.serve_forever()

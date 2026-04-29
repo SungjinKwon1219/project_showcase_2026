@@ -5,7 +5,6 @@ from server import (
     derive_body_fat_bracket,
     predict_from_payload,
     implied_beta_from_payload,
-    _json_error,
 )
 from BACCalculator import (
     implied_beta_from_session,
@@ -59,6 +58,22 @@ class PredictEndpointLogicTests(unittest.TestCase):
         })
         return p
 
+    def _valid_implied_beta_payload(self):
+        return {
+            "session_id": "session-test",
+            "profile": {"weight_kg": 70.0, "r": 0.6},
+            "drink_events": [{"grams_alcohol": 42.0, "hours_from_session_start": 0.0}],
+            "near_baseline_hours": 6.0,
+            "food_intake": "none",
+            "missed_drinks": "no",
+            "drink_log_confidence": "high",
+            "drink_timing_confidence": "high",
+            "vomited": False,
+            "blackout": False,
+            "memory_gap": False,
+            "prior_beta": 0.015,
+        }
+
     # ── shape tests ───────────────────────────────────────────────────────
     def test_predict_returns_expected_shape(self):
         result = predict_from_payload(self._valid_payload())
@@ -74,6 +89,8 @@ class PredictEndpointLogicTests(unittest.TestCase):
         self.assertEqual(result["beta_metadata"]["source"], "population")
         self.assertEqual(result["beta_metadata"]["sessions_used"], 0)
         self.assertEqual(result["model"]["beta_per_hour"], result["beta_metadata"]["value"])
+        self.assertEqual(result["personalization"]["calibration_type"], "limited_beta_only")
+        self.assertFalse(result["personalization"]["active"])
         self.assertIn("curve", result)
         self.assertEqual(result["curve_metadata"]["source"], "legacy_total_grams")
 
@@ -82,6 +99,8 @@ class PredictEndpointLogicTests(unittest.TestCase):
         self.assertEqual(result["model"]["personalization"], "bayesian_shrinkage_active")
         self.assertEqual(result["model"]["sessions_used"], 5)
         self.assertGreater(result["model"]["personal_weight_pct"], 0)
+        self.assertTrue(result["personalization"]["active"])
+        self.assertEqual(result["personalization"]["calibration_type"], "limited_beta_only")
 
     def test_predict_one_history_entry_uses_single_session_average(self):
         result = predict_from_payload(self._payload_with_one_history_entry())
@@ -138,6 +157,128 @@ class PredictEndpointLogicTests(unittest.TestCase):
         result = predict_from_payload(p)
         self.assertEqual(result["beta_metadata"]["sessions_used"], 1)
         self.assertEqual(result["beta_metadata"]["sessions_excluded"], 1)
+
+    def test_predict_applies_usable_feedback_limited_beta_only_to_current_bac(self):
+        baseline = predict_from_payload(self._valid_payload())
+        calibrated_payload = self._valid_payload()
+        calibrated_payload["history"] = {
+            "session_implied_betas": [
+                {"implied_beta": 0.010, "usable_for_personalization": True, "confidence": 0.9},
+            ]
+        }
+
+        calibrated = predict_from_payload(calibrated_payload)
+
+        self.assertEqual(calibrated["model"]["personalization"], "bayesian_shrinkage_active")
+        self.assertEqual(calibrated["beta_metadata"]["sessions_used"], 1)
+        self.assertLess(calibrated["model"]["beta_per_hour"], baseline["model"]["beta_per_hour"])
+        self.assertGreater(calibrated["bac"]["estimate"], baseline["bac"]["estimate"])
+
+    def test_predict_reports_active_limited_beta_personalization_metadata(self):
+        payload = self._valid_payload()
+        payload["history"] = {
+            "session_implied_betas": [
+                {"implied_beta": 0.010, "usable_for_personalization": True, "confidence": 0.9},
+            ]
+        }
+        result = predict_from_payload(payload)
+
+        summary = result["personalization"]
+        self.assertEqual(summary["calibration_type"], "limited_beta_only")
+        self.assertTrue(summary["active"])
+        self.assertEqual(summary["source_count"], 1)
+        self.assertEqual(summary["usable_source_count"], 1)
+        self.assertNotEqual(summary["base_beta"], summary["effective_beta"])
+
+    def test_predict_reports_inactive_limited_beta_personalization_metadata(self):
+        result = predict_from_payload(self._valid_payload())
+
+        summary = result["personalization"]
+        self.assertEqual(summary["calibration_type"], "limited_beta_only")
+        self.assertFalse(summary["active"])
+        self.assertEqual(summary["source_count"], 0)
+        self.assertEqual(summary["usable_source_count"], 0)
+        self.assertEqual(summary["base_beta"], summary["effective_beta"])
+
+    def test_predict_default_allows_active_limited_personalization_when_usable_signals_exist(self):
+        payload = self._valid_payload()
+        payload["history"] = {
+            "session_implied_betas": [
+                {"implied_beta": 0.010, "usable_for_personalization": True, "confidence": 0.9},
+            ]
+        }
+
+        result = predict_from_payload(payload)
+
+        self.assertTrue(result["personalization"]["active"])
+        self.assertFalse(result["personalization"]["disabled_by_user"])
+        self.assertNotEqual(
+            result["personalization"]["base_beta"],
+            result["personalization"]["effective_beta"],
+        )
+
+    def test_predict_disabled_limited_personalization_uses_base_beta_with_counts_visible(self):
+        baseline = predict_from_payload(self._valid_payload())
+        payload = self._valid_payload()
+        payload["history"] = {
+            "session_implied_betas": [
+                {"implied_beta": 0.010, "usable_for_personalization": True, "confidence": 0.9},
+            ]
+        }
+        payload["personalization_settings"] = {"limited_personalization_enabled": False}
+
+        result = predict_from_payload(payload)
+
+        summary = result["personalization"]
+        self.assertFalse(summary["active"])
+        self.assertTrue(summary["disabled_by_user"])
+        self.assertEqual(summary["source_count"], 1)
+        self.assertEqual(summary["usable_source_count"], 1)
+        self.assertEqual(summary["base_beta"], summary["effective_beta"])
+        self.assertEqual(result["model"]["beta_per_hour"], baseline["model"]["beta_per_hour"])
+        self.assertEqual(result["bac"]["estimate"], baseline["bac"]["estimate"])
+        self.assertIn("turned off", summary["message"])
+
+    def test_predict_omitting_personalization_settings_keeps_calibration_when_usable_signals_exist(self):
+        """Backward compatible: omitting personalization_settings behaves like personalization enabled."""
+        payload = self._valid_payload()
+        payload["history"] = self._payload_with_history()["history"]
+        self.assertNotIn("personalization_settings", payload)
+
+        result = predict_from_payload(payload)
+
+        self.assertFalse(result["personalization"]["disabled_by_user"])
+        self.assertTrue(result["personalization"]["active"])
+
+    def test_predict_personalization_settings_explicit_true_matches_omitted_behavior(self):
+        calibrated = predict_from_payload(self._payload_with_history())
+        payload = self._payload_with_history()
+        payload["personalization_settings"] = {"limited_personalization_enabled": True}
+
+        explicit = predict_from_payload(payload)
+
+        self.assertFalse(explicit["personalization"]["disabled_by_user"])
+        self.assertEqual(
+            explicit["model"]["beta_per_hour"], calibrated["model"]["beta_per_hour"]
+        )
+        self.assertEqual(calibrated["personalization"]["active"], explicit["personalization"]["active"])
+
+    def test_predict_ignores_unusable_feedback_limited_beta_only_history(self):
+        baseline = predict_from_payload(self._valid_payload())
+        unusable_payload = self._valid_payload()
+        unusable_payload["history"] = {
+            "session_implied_betas": [
+                {"implied_beta": 0.010, "usable_for_personalization": False, "confidence": 0.0},
+            ]
+        }
+
+        result = predict_from_payload(unusable_payload)
+
+        self.assertEqual(result["model"]["personalization"], "not_enabled")
+        self.assertEqual(result["beta_metadata"]["sessions_used"], 0)
+        self.assertEqual(result["beta_metadata"]["sessions_excluded"], 1)
+        self.assertEqual(result["model"]["beta_per_hour"], baseline["model"]["beta_per_hour"])
+        self.assertEqual(result["bac"]["estimate"], baseline["bac"]["estimate"])
 
     # ── body-fat bucket / coefficient philosophy tests ────────────────────
     def test_body_fat_percent_maps_to_universal_buckets(self):
@@ -403,28 +544,24 @@ class PredictEndpointLogicTests(unittest.TestCase):
         self.assertLess(light, heavy)
 
     # ── /implied-beta endpoint ────────────────────────────────────────────
-    def test_implied_beta_endpoint_returns_value(self):
-        result = implied_beta_from_payload({
-            "grams_alcohol": 42.0,
-            "weight_kg": 70.0,
-            "r": 0.6,
-            "felt_sober_hours": 6.0,
-        })
+    def test_implied_beta_can_return_usable_limited_beta_with_high_confidence_feedback(self):
+        result = implied_beta_from_payload(self._valid_implied_beta_payload())
         self.assertIn("implied_beta", result)
+        self.assertTrue(result["usable_for_personalization"])
+        self.assertEqual(result["reason"], "usable")
+        self.assertEqual(result["calibration_type"], "limited_beta_only")
         self.assertGreaterEqual(result["implied_beta"], MIN_BETA_PER_HOUR)
         self.assertLessEqual(result["implied_beta"],    MAX_BETA_PER_HOUR)
-        self.assertIn("legacy_payload_no_event_timing", result["warnings"])
-        self.assertIn("legacy_payload_no_event_timing", result["validity_flags"])
 
     def test_implied_beta_endpoint_zero_sober_hours_returns_unusable_metadata(self):
-        result = implied_beta_from_payload({
-            "grams_alcohol": 42, "weight_kg": 70, "r": 0.6, "felt_sober_hours": 0
-        })
+        payload = self._valid_implied_beta_payload()
+        payload["near_baseline_hours"] = 0
+        result = implied_beta_from_payload(payload)
         self.assertFalse(result["usable_for_personalization"])
-        self.assertIn("invalid_felt_sober_hours", result["validity_flags"])
+        self.assertIn("near_baseline_hours_invalid", result["rejection_reasons"])
 
     def test_implied_beta_endpoint_new_event_aware_payload_returns_metadata(self):
-        result = implied_beta_from_payload({
+        payload = {
             "profile_snapshot": {"weight_kg": 70.0, "r": 0.6},
             "drink_events": [
                 {"grams_alcohol": 14, "hours_from_session_start": 0},
@@ -437,9 +574,13 @@ class PredictEndpointLogicTests(unittest.TestCase):
                 "final_bac_anchor": 0.02,
                 "blackout": False,
                 "vomited": False,
+                "missed_drinks": "no",
+                "drink_log_confidence": "high",
+                "drink_timing_confidence": "high",
             },
             "prior_beta": 0.015,
-        })
+        }
+        result = implied_beta_from_payload(payload)
         self.assertEqual(result["method"], "event_aware_absorption_reverse_beta_v1")
         self.assertIn("units", result)
         self.assertIn("confidence", result)
@@ -448,40 +589,65 @@ class PredictEndpointLogicTests(unittest.TestCase):
         self.assertEqual(result["effective_drink_count"], 3)
 
     def test_implied_beta_endpoint_vomiting_returns_unusable(self):
+        payload = self._valid_implied_beta_payload()
+        payload["vomited"] = True
+        result = implied_beta_from_payload(payload)
+        self.assertFalse(result["usable_for_personalization"])
+        self.assertIn("vomiting_reported", result["rejection_reasons"])
+
+    def test_implied_beta_rejects_missed_drinks_limited_beta_only(self):
+        payload = self._valid_implied_beta_payload()
+        payload["missed_drinks"] = "some"
+        result = implied_beta_from_payload(payload)
+        self.assertFalse(result["usable_for_personalization"])
+        self.assertIn("missed_drinks_not_no", result["rejection_reasons"])
+
+    def test_implied_beta_rejects_drink_log_confidence_not_high_limited_beta_only(self):
+        payload = self._valid_implied_beta_payload()
+        payload["drink_log_confidence"] = "medium"
+        result = implied_beta_from_payload(payload)
+        self.assertFalse(result["usable_for_personalization"])
+        self.assertIn("drink_log_confidence_not_high", result["rejection_reasons"])
+
+    def test_implied_beta_rejects_drink_timing_confidence_not_high_limited_beta_only(self):
+        payload = self._valid_implied_beta_payload()
+        payload["drink_timing_confidence"] = "low"
+        result = implied_beta_from_payload(payload)
+        self.assertFalse(result["usable_for_personalization"])
+        self.assertIn("drink_timing_confidence_not_high", result["rejection_reasons"])
+
+    def test_implied_beta_rejects_blackout_limited_beta_only(self):
+        payload = self._valid_implied_beta_payload()
+        payload["blackout"] = True
+        result = implied_beta_from_payload(payload)
+        self.assertFalse(result["usable_for_personalization"])
+        self.assertIn("blackout_reported", result["rejection_reasons"])
+
+    def test_implied_beta_rejects_memory_gap_limited_beta_only(self):
+        payload = self._valid_implied_beta_payload()
+        payload["memory_gap"] = True
+        result = implied_beta_from_payload(payload)
+        self.assertFalse(result["usable_for_personalization"])
+        self.assertIn("memory_gap_reported", result["rejection_reasons"])
+
+    def test_implied_beta_rejects_missing_confidence_limited_beta_only(self):
         result = implied_beta_from_payload({
-            "profile_snapshot": {"weight_kg": 70.0, "r": 0.6},
-            "drink_events": [{"grams_alcohol": 42, "hours_from_session_start": 0}],
-            "review": {"felt_sober_hours": 5, "vomited": True},
+            "profile": {"weight_kg": 70.0, "r": 0.6},
+            "drink_events": [{"grams_alcohol": 42.0, "hours_from_session_start": 0.0}],
+            "near_baseline_hours": 6.0,
         })
         self.assertFalse(result["usable_for_personalization"])
-        self.assertIn("vomiting_reported_unreliable_for_personalization", result["validity_flags"])
+        self.assertIn("missed_drinks_not_no", result["rejection_reasons"])
+        self.assertIn("drink_log_confidence_not_high", result["rejection_reasons"])
+        self.assertIn("drink_timing_confidence_not_high", result["rejection_reasons"])
 
-    def test_implied_beta_endpoint_blackout_reduces_confidence(self):
-        result = implied_beta_from_payload({
-            "profile_snapshot": {"weight_kg": 70.0, "r": 0.6},
-            "drink_events": [{"grams_alcohol": 42, "hours_from_session_start": 0}],
-            "review": {"felt_sober_hours": 5, "blackout": True},
-        })
-        self.assertIn("blackout_reported_reduces_confidence", result["validity_flags"])
-        self.assertLess(result["confidence"], 1.0)
-
-    def test_implied_beta_endpoint_malformed_payload_raises_value_error(self):
-        with self.assertRaises(ValueError):
-            implied_beta_from_payload({})
-
-    def test_malformed_implied_beta_error_shape_is_frontend_usable(self):
-        try:
-            implied_beta_from_payload({})
-        except ValueError as exc:
-            body, status = _json_error(str(exc), 400)
-        else:
-            self.fail("Expected malformed implied-beta payload to raise ValueError")
-
-        self.assertEqual(status, 400)
-        self.assertIn("error", body)
-        self.assertEqual(body["error"]["status"], 400)
-        self.assertIn("message", body["error"])
-        self.assertIn("drink_events or grams_alcohol", body["error"]["message"])
+    def test_malformed_implied_beta_payload_returns_structured_unusable_result(self):
+        payload = self._valid_implied_beta_payload()
+        del payload["drink_events"]
+        result = implied_beta_from_payload(payload)
+        self.assertFalse(result["usable_for_personalization"])
+        self.assertEqual(result["calibration_type"], "limited_beta_only")
+        self.assertIn("missing_drink_events", result["rejection_reasons"])
 
     # ── estimate_beta integration ─────────────────────────────────────────
     def test_estimate_beta_with_profile_and_history(self):

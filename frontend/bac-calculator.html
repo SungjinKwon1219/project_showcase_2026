@@ -85,7 +85,8 @@
   .peak-timing{font-size:0.72rem;color:var(--accent);margin-top:0.4rem;}
   .result-status{display:inline-flex;align-items:center;gap:0.4rem;margin-top:0.85rem;border-radius:100px;padding:0.35rem 1rem;font-size:0.8rem;font-weight:500;}
   .result-status .sdot{width:6px;height:6px;border-radius:50%;}
-  .status-safe{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,240,77,0.25);}
+  /* "lower" tier = low estimated BAC band (not driving or medical safety). */
+  .status-lower{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(200,240,77,0.25);}
   .status-warn{background:rgba(255,179,71,0.12);color:var(--orange);border:1px solid rgba(255,179,71,0.25);}
   .status-danger{background:rgba(255,107,107,0.12);color:var(--red);border:1px solid rgba(255,107,107,0.25);}
   .result-detail-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);}
@@ -93,12 +94,12 @@
   .result-detail-label{font-size:0.68rem;color:var(--muted);margin-top:0.1rem;}
   .model-badge{font-size:0.7rem;color:var(--muted);margin-top:0.65rem;}
   .model-badge span{color:var(--accent);font-family:'Syne',sans-serif;font-weight:700;}
-  /* Personalization meter */
+  /* Limited personalization status */
   .pers-bar-wrap{margin-top:0.75rem;padding:0.75rem 1rem;background:rgba(200,240,77,0.05);border:1px solid rgba(200,240,77,0.15);border-radius:12px;text-align:left;}
-  .pers-bar-label{font-size:0.7rem;color:var(--muted-mid);margin-bottom:0.4rem;}
-  .pers-bar-track{height:4px;background:var(--border);border-radius:100px;overflow:hidden;}
-  .pers-bar-fill{height:100%;background:var(--accent);border-radius:100px;transition:width 0.5s ease;}
-  .pers-bar-pct{font-size:0.7rem;color:var(--accent);margin-top:0.3rem;}
+  .pers-bar-wrap.inactive{background:rgba(255,255,255,0.035);border-color:var(--border);}
+  .pers-bar-label{font-size:0.72rem;color:var(--accent);font-weight:700;margin-bottom:0.25rem;}
+  .pers-bar-wrap.inactive .pers-bar-label{color:var(--muted-mid);}
+  .pers-bar-pct{font-size:0.72rem;color:var(--muted-mid);line-height:1.45;margin-top:0.2rem;}
   /* Graph */
   .graph-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:1.75rem;}
   .graph-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
@@ -160,7 +161,7 @@
   <div class="topbar">
     <div class="page-heading">
       <h1>BAC Calculator</h1>
-      <p>Start a session, log drinks in real time, get personalized estimates.</p>
+      <p>Start a session, log drinks in real time, get profile-informed estimates.</p>
     </div>
   </div>
 
@@ -170,7 +171,7 @@
 
       <!-- Profile status banner -->
       <div id="profileBanner" class="profile-banner no-profile">
-        <div class="profile-banner-text">Complete your profile for personalized estimates.</div>
+        <div class="profile-banner-text">Complete your profile for profile-informed estimates.</div>
         <a href="input.html" class="profile-banner-link" id="profileBannerLink">Set up Profile →</a>
       </div>
 
@@ -236,7 +237,7 @@
                   <option value="vomit">🤢 Vomiting</option>
                   <option value="heavy_intoxication">😵 Heavy intoxication</option>
                   <option value="blackout_concern">⚠️ Blackout concern</option>
-                  <option value="felt_sober">✅ Felt sober</option>
+                  <option value="felt_sober">✅ Felt low/near-baseline</option>
                   <option value="other">Other</option>
                 </select>
               </div>
@@ -278,7 +279,7 @@
           </div>
         </div>
         <div>
-          <span class="result-status status-safe" id="bacStatus">
+          <span class="result-status status-lower" id="bacStatus">
             <span class="sdot" style="background:var(--accent);"></span>
             <span id="bacStatusText">Start a session and log a drink</span>
           </span>
@@ -298,10 +299,9 @@
           </div>
         </div>
         <div class="model-badge">r̂ = <span id="rDisplay">—</span> · β = <span id="betaDisplay">—</span></div>
-        <div class="pers-bar-wrap" id="persBarWrap" style="display:none;">
-          <div class="pers-bar-label">Personalization progress (<span id="persSessionCount">0</span> sessions)</div>
-          <div class="pers-bar-track"><div class="pers-bar-fill" id="persBarFill" style="width:0%"></div></div>
-          <div class="pers-bar-pct"><span id="persPct">0</span>% personal · <span id="priorPct">100</span>% population prior</div>
+        <div class="pers-bar-wrap inactive" id="persBarWrap">
+          <div class="pers-bar-label" id="personalizationStatusTitle">Personalization inactive</div>
+          <div class="pers-bar-pct" id="personalizationStatusText">No feedback/calibration history yet. Personalization does not determine legal or medical sobriety.</div>
         </div>
       </div>
 
@@ -345,9 +345,10 @@
           <div class="legend-item"><div class="legend-line" style="background:var(--accent);"></div>Estimated BAC</div>
           <div class="legend-item"><div class="legend-line" style="background:var(--red);opacity:0.6;"></div>0.08 common legal driving threshold</div>
         </div>
-        <div class="zone-legend" aria-label="BAC zone legend">
-          <div class="zone-card" data-bac-zone="safe">
-            <div class="zone-head"><span class="zone-swatch" style="background:rgba(200,240,77,0.55);"></span><span class="zone-name">Safe</span></div>
+        <p style="font-size:0.69rem;color:var(--muted-mid);line-height:1.45;margin:0 0 0.75rem;">BAC ranges are estimates for visualization only. They do not determine legal or medical sobriety or whether any activity is safe.</p>
+        <div class="zone-legend" aria-label="BAC estimate band legend">
+          <div class="zone-card" data-bac-zone="lower">
+            <div class="zone-head"><span class="zone-swatch" style="background:rgba(200,240,77,0.55);"></span><span class="zone-name">Lower estimate range</span></div>
             <div class="zone-range">0.00–0.08 BAC</div>
             <div class="zone-symptoms">mild relaxation · mood lift · slower reactions</div>
             <div class="zone-current-badge">Current level</div>
@@ -447,7 +448,7 @@ function syncProfileBanner() {
     link.textContent = 'Update →';
   } else {
     banner.className = 'profile-banner no-profile';
-    text.textContent = 'Complete your profile for personalized estimates.';
+    text.textContent = 'Complete your profile for profile-informed estimates.';
     link.textContent = 'Set up Profile →';
   }
   return Boolean(p);
@@ -650,7 +651,13 @@ document.getElementById('btnUpdate').addEventListener('click', function() {
 
 /* ── Build /predict payload ── */
 function buildPayload(profile, session, summary) {
+  // Feedback history is beta-only evidence. It may calibrate elimination rate,
+  // but not absorption, r/body-water distribution, drink-size error, food
+  // effects, or subjective impairment; unusable feedback must stay excluded.
   var impliedBetas = SaferSessionStorage.getAllImpliedBetas();
+  var personalizationSettings = SaferSessionStorage.getPersonalizationSettings
+    ? SaferSessionStorage.getPersonalizationSettings()
+    : { limited_personalization_enabled: true, save_feedback_enabled: true };
   return {
     profile: {
       sex: profile.sex,
@@ -668,6 +675,9 @@ function buildPayload(profile, session, summary) {
     },
     history: {
       session_implied_betas: impliedBetas
+    },
+    personalization_settings: {
+      limited_personalization_enabled: personalizationSettings.limited_personalization_enabled !== false
     }
   };
 }
@@ -692,11 +702,11 @@ async function _doComputeNow(options) {
   options = options || {};
   if (computeInFlight) return;
   var p = getProfile();
-  if (!p) { setStatus('Complete your profile first.', 'safe'); return; }
+  if (!p) { setStatus('Complete your profile first.', 'lower'); return; }
   var session = getActive();
   if (!session) { clearAutoRefresh(); return; }
   var s = summarize(session);
-  if (s.drinks === 0 || s.grams <= 0) { setStatus('Log a drink to get an estimate.', 'safe'); return; }
+  if (s.drinks === 0 || s.grams <= 0) { setStatus('Log a drink to get an estimate.', 'lower'); return; }
   refreshSessionStatus(session);
 
   // Update session inputs
@@ -793,7 +803,7 @@ function bacZoneForValue(value) {
   var bac = finiteNumberOrNull(value);
   if (bac == null) return null;
   bac = Math.max(0, bac);
-  if (bac < 0.08) return 'safe';
+  if (bac < 0.08) return 'lower';
   if (bac < 0.15) return 'mild';
   if (bac < 0.25) return 'intoxication';
   return 'heavy';
@@ -866,6 +876,59 @@ function peakTimingText(status, timeToPeakHours) {
   return 'Peak timing unavailable';
 }
 
+function renderPersonalizationStatus(data) {
+  var wrap = document.getElementById('persBarWrap');
+  var title = document.getElementById('personalizationStatusTitle');
+  var text = document.getElementById('personalizationStatusText');
+  if (!wrap || !title || !text) return;
+  var reliability = (SaferSessionStorage && typeof SaferSessionStorage.getPersonalizationReliabilitySummary === 'function')
+    ? SaferSessionStorage.getPersonalizationReliabilitySummary()
+    : null;
+  var reliabilityText = reliability ? ' Personalization evidence: ' + reliability.reliability_label + '.' : '';
+
+  if (!data) {
+    wrap.classList.add('inactive');
+    title.textContent = 'No feedback/calibration history yet';
+    text.textContent = 'Personalization inactive: using baseline elimination estimate.' + reliabilityText + ' Personalization does not determine legal or medical sobriety.';
+    return;
+  }
+
+  var summary = SaferSessionStorage.getPredictionPersonalizationState(
+    (data && data.personalization) ? { personalization_summary: data.personalization } : null
+  );
+  var baseText = summary.calibration_message || 'Personalization inactive: using baseline elimination estimate.';
+  var detail = '';
+
+  if (summary.personalization_active) {
+    wrap.classList.remove('inactive');
+    title.textContent = 'Limited personalization active';
+    detail = 'High-confidence prior feedback is adjusting the elimination estimate.';
+  } else {
+    wrap.classList.add('inactive');
+    if (summary.disabled_by_user) {
+      title.textContent = 'Limited personalization turned off';
+      detail = 'This estimate uses the baseline elimination assumption.';
+      if (summary.usable_source_count > 0) {
+        detail += ' Usable calibration signals are saved but not currently applied.';
+      }
+    } else if (summary.source_count > 0 && summary.usable_source_count === 0) {
+      title.textContent = 'Feedback saved, calibration unavailable';
+      detail = 'Feedback exists, but no usable calibration signal is available for this estimate.';
+    } else if (summary.calibration_status === 'no_prediction_metadata') {
+      title.textContent = 'No calibration signal recorded';
+      detail = 'Older estimates may not include limited personalization metadata.';
+    } else if (summary.source_count === 0) {
+      title.textContent = 'No feedback/calibration history yet';
+      detail = 'Personalization inactive: using baseline elimination estimate.';
+    } else {
+      title.textContent = 'Personalization inactive';
+      detail = 'Using baseline elimination estimate.';
+    }
+  }
+
+  text.textContent = detail + ' ' + baseText + reliabilityText + ' Personalization does not determine legal or medical sobriety.';
+}
+
 function clockFromSessionHour(session, hour) {
   var startMs = new Date(session && session.started_at ? session.started_at : Date.now()).getTime();
   if (!Number.isFinite(startMs) || !Number.isFinite(hour) || hour < 0) return '—';
@@ -913,7 +976,7 @@ function renderResult(data, summary, session, profile, requestPayload) {
   }
 
   // Status
-  if (est < 0.05)       setStatus('Lower estimated risk right now', 'safe');
+  if (est < 0.05)       setStatus('Lower estimated risk right now', 'lower');
   else if (est < 0.08)  setStatus('Elevated estimated risk — approaching 0.08 threshold', 'warn');
   else                  setStatus('Above common legal driving threshold (0.08)', 'danger');
 
@@ -933,20 +996,7 @@ function renderResult(data, summary, session, profile, requestPayload) {
   document.getElementById('betaDisplay').textContent = beta.toFixed(4);
   document.getElementById('graphLabel').textContent  = 'r̂=' + r.toFixed(3);
 
-  // Personalization bar
-  var nSess = model.sessions_used || 0;
-  var persPct = model.personal_weight_pct || 0;
-  var priorPct = model.prior_weight_pct || 100;
-  var persWrap = document.getElementById('persBarWrap');
-  if (nSess > 0) {
-    persWrap.style.display = 'block';
-    document.getElementById('persSessionCount').textContent = nSess;
-    document.getElementById('persBarFill').style.width = persPct + '%';
-    document.getElementById('persPct').textContent = persPct.toFixed(0);
-    document.getElementById('priorPct').textContent = priorPct.toFixed(0);
-  } else {
-    persWrap.style.display = 'none';
-  }
+  renderPersonalizationStatus(data);
 
   // Tip text
   var disc = (data.meta && data.meta.disclaimer) ? data.meta.disclaimer : 'Estimates are approximate and should not be used to decide whether to drive or for medical decisions.';
@@ -961,6 +1011,7 @@ function renderResult(data, summary, session, profile, requestPayload) {
     estimate: est,
     beta: beta,
     beta_metadata: data.beta_metadata || null,
+    personalization_summary: data.personalization || null,
     peak_bac: Number.isFinite(peakBac) ? peakBac : null,
     peak_bac_hour: Number.isFinite(peakHour) ? peakHour : null,
     peak_status: peakStatus || null,
@@ -998,7 +1049,7 @@ function renderResult(data, summary, session, profile, requestPayload) {
 
 function setStatus(msg, type) {
   var el = document.getElementById('bacStatus');
-  var colors = { safe: 'var(--accent)', warn: 'var(--orange)', danger: 'var(--red)' };
+  var colors = { lower: 'var(--accent)', warn: 'var(--orange)', danger: 'var(--red)' };
   el.className = 'result-status status-' + type;
   el.innerHTML = '<span class="sdot" style="background:' + colors[type] + '"></span><span>' + msg + '</span>';
 }
@@ -1017,7 +1068,8 @@ function resetDisplay() {
   document.getElementById('rDisplay').textContent     = '—';
   document.getElementById('betaDisplay').textContent  = '—';
   document.getElementById('graphLabel').textContent   = '—';
-  setStatus('Start a session and log a drink', 'safe');
+  renderPersonalizationStatus(null);
+  setStatus('Start a session and log a drink', 'lower');
   updateZoneLegend(null);
   resetGraph();
 }

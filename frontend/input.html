@@ -52,11 +52,6 @@
   .input-with-unit{display:flex;align-items:center;gap:0.5rem;}
   .input-with-unit input{flex:1;}
   .unit-label{font-size:0.78rem;color:var(--muted);white-space:nowrap;}
-  .fat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;}
-  .fat-btn{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--muted-mid);padding:0.75rem 0.5rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.82rem;text-align:center;transition:all 0.15s;}
-  .fat-btn:hover{border-color:var(--border-bright);color:var(--text);}
-  .fat-btn.active{background:var(--accent-dim);border-color:rgba(200,240,77,0.35);color:var(--accent);}
-  .fat-btn .fat-range{font-size:0.68rem;color:inherit;opacity:0.7;display:block;margin-top:0.1rem;}
   .actions{display:flex;gap:0.75rem;padding:1.25rem 1.75rem;}
   .btn-primary{background:var(--accent);color:#0F1A00;border:none;border-radius:12px;padding:0.85rem 1.75rem;font-family:'DM Sans',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;transition:box-shadow 0.2s,transform 0.15s;}
   .btn-primary:hover{box-shadow:0 0 24px var(--accent-glow);transform:translateY(-1px);}
@@ -92,7 +87,7 @@
   </div>
 
   <div class="banner banner-info" id="newUserBanner">
-    👋 <span>Welcome! Fill in your details below to get personalized estimates. All fields help the model — body fat is especially important.</span>
+    👋 <span>Welcome! Fill in your details below to get profile-informed estimates. Body-fat estimate is used as a broad modeling input.</span>
   </div>
   <div class="banner banner-success" id="savedBanner" style="display:none;">
     ✓ Profile saved! Head to <a href="bac-calculator.html" style="color:inherit;font-weight:600;">BAC Calculator</a> to start a session.
@@ -164,22 +159,14 @@
             <div class="field-error" id="err-weight_lbs"></div>
           </div>
         </div>
-        <div class="field" data-field="body_fat_percent" style="margin-bottom:0.75rem;">
+        <div class="field" data-field="body_fat_percent">
           <label for="bodyFatInput">Body fat % <span style="color:var(--red)">*</span></label>
           <div class="input-with-unit">
             <input type="number" id="bodyFatInput" min="3" max="65" step="0.1" placeholder="e.g. 18" required>
             <span class="unit-label">%</span>
           </div>
-          <div class="field-hint">Used as a broad modeling input, not a medical classification.</div>
+          <div class="field-hint">Used only as a broad modeling input for alcohol distribution. This is not a health, fitness, or medical classification.</div>
           <div class="field-error" id="err-body_fat_percent"></div>
-        </div>
-        <div style="margin-bottom:0.5rem;">
-          <label style="font-size:0.73rem;color:var(--muted);display:block;margin-bottom:0.5rem;letter-spacing:0.3px;text-transform:uppercase;font-weight:500;">Or pick a bracket (auto-fills %)</label>
-          <div class="fat-grid">
-            <button type="button" class="fat-btn" data-fat="low" data-val="12">Lower estimate<span class="fat-range">Model bucket &lt;15%</span></button>
-            <button type="button" class="fat-btn" data-fat="mid" data-val="20">Middle estimate<span class="fat-range">Model bucket 15–25%</span></button>
-            <button type="button" class="fat-btn" data-fat="high" data-val="30">Higher estimate<span class="fat-range">Model bucket &gt;25%</span></button>
-          </div>
         </div>
       </div>
     </div>
@@ -229,20 +216,11 @@
     else setErr('height_in', '');
     if (!weight || isNaN(weight) || Number(weight) <= 0) { setErr('weight_lbs', 'Enter your weight in pounds.'); ok = false; }
     else setErr('weight_lbs', '');
-    if (!bf || isNaN(bf) || Number(bf) < 3 || Number(bf) > 65) { setErr('body_fat_percent', 'Enter a body fat % between 3 and 65, or use the selector above.'); ok = false; }
+    if (!bf || isNaN(bf) || Number(bf) < 3 || Number(bf) > 65) { setErr('body_fat_percent', 'Enter a body fat % between 3 and 65.'); ok = false; }
     else setErr('body_fat_percent', '');
 
     return ok;
   }
-
-  document.querySelectorAll('.fat-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('.fat-btn').forEach(function(b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      document.getElementById('bodyFatInput').value = btn.dataset.val;
-      setErr('body_fat_percent', '');
-    });
-  });
 
   document.getElementById('profileForm').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -294,17 +272,27 @@
     if (p.age_band) document.getElementById('ageBandSelect').value = p.age_band;
     if (p.height_in) document.getElementById('heightInput').value = p.height_in;
     if (p.weight_lbs) document.getElementById('weightInput').value = p.weight_lbs;
-    if (p.body_fat_percent) document.getElementById('bodyFatInput').value = p.body_fat_percent;
+    function legacyBracketToImplicitPercent(cat) {
+      if (cat == null || cat === '') return null;
+      var v = String(cat).toLowerCase();
+      if (v === 'low') return 12;
+      if (v === 'mid' || v === 'middle') return 20;
+      if (v === 'high') return 30;
+      return null;
+    }
+
+    var bfRaw = p.body_fat_percent;
+    var bfNum = (bfRaw != null && bfRaw !== '') ? Number(String(bfRaw).replace(',', '.')) : NaN;
+    var bodyFatEl = document.getElementById('bodyFatInput');
+    if (!isNaN(bfNum) && bfNum >= 3 && bfNum <= 65) {
+      bodyFatEl.value = bfNum;
+    } else {
+      var implied = legacyBracketToImplicitPercent(p.body_fat_bracket) ||
+        legacyBracketToImplicitPercent(p.body_fat_category);
+      if (implied != null) bodyFatEl.value = implied;
+    }
     if (p.drinks_per_week) document.getElementById('dpwInput').value = p.drinks_per_week;
     document.getElementById('submitBtn').textContent = 'Update Profile →';
-    // highlight fat bracket if matches
-    var bf = p.body_fat_percent;
-    if (bf) {
-      var bracket = bf < 15 ? 'low' : bf <= 25 ? 'mid' : 'high';
-      document.querySelectorAll('.fat-btn').forEach(function(b) {
-        b.classList.toggle('active', b.dataset.fat === bracket);
-      });
-    }
   }
 
   prefillFromStored();
